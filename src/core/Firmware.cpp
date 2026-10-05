@@ -8,12 +8,10 @@ void Firmware::begin()  {
   apps.add(nfc);
   apps.add(ir);
   apps.add(files);
-  apps.add(scripts);
+  apps.add(scripting);
   apps.add(tools);
   apps.add(settings);
-  apps.add(about);
   apps.add(games);
-  apps.add(python);
   apps.add(utils);
   ui.exit=[this]  {
     apps.launcher();
@@ -30,6 +28,17 @@ void Firmware::update()  {
   InputEvent event=services.input.poll(services.config.values);
   bool consumed=idle.update(services,event);
   services.update();
+  if(services.bridge.notificationRevision!=notificationRevision) {
+    notificationRevision=services.bridge.notificationRevision;
+    if(services.config.values.notifyGlobal&&(!idle.asleep()||services.config.values.notifyWake)) {
+      if(idle.asleep())idle.wake(services);
+      notificationVisible=true;notificationAt=millis();ui.dirty=true;
+      services.beep(2400,60);
+    }
+  }
+  if(notificationVisible&&millis()-notificationAt>=5000) {
+    notificationVisible=false;services.display.invalidate();ui.dirty=true;
+  }
   if(!consumed&&event!=InputEvent::None)  {
     if(services.config.values.uiBeep)services.beep();
     if(services.config.values.hardwareDebug)LOG_DEBUG("INPUT","Event %d ADC %d",(int)event,services.input.raw);
@@ -54,6 +63,7 @@ void Firmware::update()  {
   }
   if(ui.dirty&&!idle.asleep())  {
     apps.draw();
+    if(notificationVisible)services.display.notification(services.bridge.notification,services.config.values.theme);
     frames++;
   }
   yield();

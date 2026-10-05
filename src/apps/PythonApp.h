@@ -11,6 +11,7 @@ class PythonApp:public MenuApp {
   void run(const String& path);
 public:
   using MenuApp::MenuApp;
+  Action rootBack;
   const char* name()const override { return "Python"; }
   Icon icon()const override { return Icon::Python; }
   bool ownsNavigation()const override { return active; }

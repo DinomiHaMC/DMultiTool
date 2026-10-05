@@ -5,7 +5,6 @@ void SettingsApp::save()  {
   if(title=="Display")display(false);
   else if(title=="Sound")sound(false);
   else if(title=="Input")input(false);
-  else if(title=="Interface")interface(false);
   else if(title=="Boot")boot(false);
   else if(title=="Developer")developer(false);
   ui.toast("Settings saved",ToastType::Success);
@@ -44,10 +43,6 @@ void SettingsApp::home()  {
     ui.message("Storage",String(s.sd.mounted?"SD mounted":"SD unavailable")+"\nNVS independent of SD\nNo automatic formatting\nLogs rotate at 1 MB");
   }
   );
-  item(p,"Interface",[this]  {
-    interface();
-  }
-  );
   item(p,"Boot",[this]  {
     boot();
   }
@@ -56,19 +51,32 @@ void SettingsApp::home()  {
     developer();
   }
   );
-  item(p,"About",[this]  {
-    ctx.apps->open("About");
-  }
-  );
   ui.page(std::move(p),false);
 }
 void SettingsApp::themes()  {
   auto p=menu("Theme");
-  for(int i=0;i<4;i++)item(p,ThemeManager::get(i).name,[this,i]  {
+  for(int i=0;i<ThemeManager::Count;i++)item(p,ThemeManager::get(i).name,[this,i]  {
     s.config.values.theme=i;s.display.invalidate();save();
   }
   );
   ui.page(std::move(p));
+}
+void SettingsApp::themeEditor(bool push) {
+  auto p=menu("Theme editor");
+  const char* fields[]={"Background","Panel","Text","Muted","Accent","Selection","Error"};
+  for(int i=0;i<7;i++)item(p,fields[i],[this,i] {
+    ui.numberInput("RGB565 hex",s.config.values.customColors[i],0,65535,[this,i](uint32_t color) {
+      s.config.values.customColors[i]=color;s.config.values.theme=ThemeManager::Custom;
+      s.config.save();s.display.invalidate();themeEditor(false);
+    },true);
+  },String(s.config.values.customColors[i],16));
+  item(p,"Copy current theme",[this] {
+    const auto& t=ThemeManager::get(s.config.values.theme);
+    uint16_t colors[]={t.background,t.panel,t.foreground,t.muted,t.accent,t.selection,t.error};
+    for(int i=0;i<7;i++)s.config.values.customColors[i]=colors[i];
+    s.config.values.theme=ThemeManager::Custom;s.config.save();s.display.invalidate();themeEditor(false);
+  });
+  ui.page(std::move(p),push);
 }
 void SettingsApp::display(bool push)  {
   auto p=menu("Display");
@@ -85,6 +93,15 @@ void SettingsApp::display(bool push)  {
   item(p,"Theme",[this]  {
     themes();
   },ThemeManager::get(s.config.values.theme).name);
+  item(p,"Theme editor",[this]{themeEditor();},"Custom RGB565 palette");
+  item(p,"Screensaver",[this] {
+    auto q=menu("Screensaver");const char* names[]={"Off","Pipes","Cosmos","Matrix"};
+    for(int i=0;i<4;i++)item(q,names[i],[this,i]{s.config.values.screensaver=i;save();});
+    ui.page(std::move(q));
+  },String(s.config.values.screensaver));
+  item(p,"Animations",[this]{s.config.values.animations=!s.config.values.animations;save();},s.config.values.animations?"On":"Off");
+  item(p,"Menu wrap",[this]{s.config.values.wrap=!s.config.values.wrap;save();},s.config.values.wrap?"On":"Off");
+  item(p,"Status bar",[this]{s.config.values.statusBar=!s.config.values.statusBar;s.display.invalidate();save();},s.config.values.statusBar?"On":"Off");
   item(p,"Brightness fixed",[this]  {
     ui.message("Display","No backlight GPIO provided.\nScreen timeout disables pixels.");
   }
@@ -136,25 +153,6 @@ void SettingsApp::input(bool push)  {
     }
     );
   },String(s.config.values.longPress)+" ms"
-  );
-  ui.page(std::move(p),push);
-}
-void SettingsApp::interface(bool push)  {
-  auto p=menu("Interface");
-  item(p,"Theme",[this]  {
-    themes();
-  }
-  );
-  item(p,"Animations",[this]  {
-    s.config.values.animations=!s.config.values.animations;save();
-  },s.config.values.animations?"On":"Off");
-  item(p,"Menu wrap",[this]  {
-    s.config.values.wrap=!s.config.values.wrap;save();
-  },s.config.values.wrap?"On":"Off"
-  );
-  item(p,"Status bar",[this]  {
-    s.config.values.statusBar=!s.config.values.statusBar;s.display.invalidate();save();
-  },s.config.values.statusBar?"On":"Off"
   );
   ui.page(std::move(p),push);
 }

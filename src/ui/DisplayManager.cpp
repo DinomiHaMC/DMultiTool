@@ -3,6 +3,69 @@
 #include "../core/Version.h"
 #include "CyrillicFont.h"
 #include <cstring>
+void DisplayManager::screensaver(uint8_t mode,uint32_t now,uint8_t theme) {
+  if(now-saverAt<40)return;
+  saverAt=now;const auto& t=ThemeManager::get(theme);
+  if(saverMode!=mode||invalid) {
+    saverMode=mode;tft.fillScreen(t.background);invalid=false;
+    for(int i=0;i<40;i++)starX[i]=starY[i]=-1;
+    pipeX=tft.width()/2;pipeY=tft.height()/2;
+  }
+  saverSeed=saverSeed*1664525+1013904223;
+  if(mode==1) {
+    if((saverSeed%11)==0)pipeDirection=(saverSeed>>16)%4;
+    int x=pipeX+(pipeDirection==0?6:pipeDirection==2?-6:0);
+    int y=pipeY+(pipeDirection==1?6:pipeDirection==3?-6:0);
+    if(x<3||y<3||x>=tft.width()-3||y>=tft.height()-3) { pipeDirection=(pipeDirection+2)%4;return; }
+    tft.drawLine(pipeX,pipeY,x,y,t.accent);tft.drawLine(pipeX+1,pipeY+1,x+1,y+1,t.accent);
+    pipeX=x;pipeY=y;
+    if(now%30000<40)tft.fillScreen(t.background);
+  } else if(mode==2) {
+    for(int i=0;i<40;i++) {
+      if(starX[i]>=0)tft.fillCircle(starX[i],starY[i],1,t.background);
+      int r=(now/18+i*29)%512;
+      int x=tft.width()/2+(((i*73+17)%201)-100)*r/200;
+      int y=tft.height()/2+(((i*131+31)%201)-100)*r/150;
+      starX[i]=starY[i]=-1;
+      if(x>0&&y>0&&x<tft.width()&&y<tft.height()) { starX[i]=x;starY[i]=y;tft.fillCircle(x,y,1,r>250?t.foreground:t.muted); }
+    }
+  } else if(mode==3) {
+    int col=(saverSeed>>8)%20,x=col*tft.width()/20;
+    int y=(now/50+col*7)%(tft.height()/9)*9;
+    tft.fillRect(x,(y+tft.height()-45)%tft.height(),6,9,t.background);
+    print(String((saverSeed>>16)%10),x,y,t.accent);
+  }
+}
+void DisplayManager::notification(const String& text,uint8_t theme) {
+  const auto& t=ThemeManager::get(theme);int y=tft.height()-82;
+  tft.fillRoundRect(6,y,tft.width()-12,74,5,t.panel);
+  tft.drawRoundRect(6,y,tft.width()-12,74,5,t.accent);
+  print("Notification",14,y+8,t.accent);
+  int chars=(tft.width()-28)/6;
+  print(text.substring(0,chars),14,y+28,t.foreground);
+  print(text.substring(chars,chars*2),14,y+46,t.foreground);
+}
+void DisplayManager::renderCalculator(const CalculatorModel& model,uint8_t theme) {
+  const auto& t=ThemeManager::get(theme);
+  if(calculatorVisible&&!invalid&&themeIndex==theme&&model.expression==previousCalculator.expression&&model.result==previousCalculator.result&&model.selected==previousCalculator.selected&&model.scientific==previousCalculator.scientific&&model.degrees==previousCalculator.degrees)return;
+  bool full=invalid||!calculatorVisible||themeIndex!=theme||model.scientific!=previousCalculator.scientific;
+  if(full)tft.fillScreen(t.background);
+  calculatorVisible=true;themeIndex=theme;invalid=false;
+  tft.fillRect(0,0,tft.width(),82,t.background);
+  print(model.scientific?"Scientific calculator":"Calculator",8,8,t.accent);
+  int chars=(tft.width()-16)/6;
+  std::string tail=model.expression.substr(model.expression.size()>size_t(chars)?model.expression.size()-chars:0);
+  print(tail.c_str(),8,30,t.foreground);print(model.result.c_str(),8,55,t.accent);
+  int rows=model.count()/5,h=(tft.height()-106)/rows,w=(tft.width()-8)/5;
+  for(int i=0;i<model.count();i++) {
+    if(!full&&i!=model.selected&&i!=previousCalculator.selected&&model.degrees==previousCalculator.degrees)continue;
+    int x=4+(i%5)*w,y=84+(i/5)*h;
+    tft.fillRoundRect(x+1,y+1,w-3,h-3,3,i==model.selected?t.selection:t.panel);
+    print(model.label(i),x+4,y+h/2-3,i==model.selected?t.accent:t.foreground);
+  }
+  print("Arrows / OK key | Hold OK exit",8,tft.height()-14,t.muted);
+  previousCalculator=model;
+}
 DisplayManager::DisplayManager():tft(&SPI,Pins::TFT_CS,Pins::TFT_DC,Pins::TFT_RST)  {
 }
 void DisplayManager::begin(uint8_t r)  {
@@ -42,8 +105,7 @@ void DisplayManager::print(const String& text,int x,int y,uint16_t color,uint8_t
 }
 void DisplayManager::splash()  {
   tft.fillScreen(0);
-  print("HACKER",22,78,0xF81F,3);
-  print("PRO 2000",22,115,0xFFFF,3);
+  print("DMultiTool",22,92,0xF81F,3);
   print("v" FW_VERSION,24,156,0x9CD5);
   tft.drawFastHLine(24,184,tft.width()-48,0xF81F);
   invalidate();
@@ -109,14 +171,16 @@ void DisplayManager::icon(Icon id,int x,int y,uint16_t c)  {
 }
 void DisplayManager::render(const MenuPage& page,const Status& s,const String& toast,ToastType type,uint8_t theme,bool bar,bool debug,int toastOffset)  {
   if(asleep)return;
+  if(calculatorVisible) { calculatorVisible=false;invalid=true; }
   if(pythonVisible) { pythonVisible=false;invalid=true; }
   if(gameVisible) { gameVisible=false;invalid=true; }
   if(keyboardVisible) { keyboardVisible=false; invalid=true; }
   const Theme& t=ThemeManager::get(theme);
-  if(theme!=themeIndex||bar!=barBefore||oldColumns!=page.columns)  {
+  if(theme!=themeIndex||bar!=barBefore||oldColumns!=page.columns||gridBefore!=page.grid)  {
     invalid=true;
     themeIndex=theme;
     barBefore=bar;
+    gridBefore=page.grid;
   }
   if(invalid)  {
     tft.fillScreen(t.background);
@@ -124,7 +188,7 @@ void DisplayManager::render(const MenuPage& page,const Status& s,const String& t
     header=footer=focus="";
     oldTop=-1;
   }
-  String h=String("HP2000 ")+(s.connected?"W* ":s.wifi?"W ":"- ")+(s.bleConnected?"B* ":s.ble?"B ":"- ")+(s.sd?"SD ":"-- ")+(s.nfc?"N ":"- ")+String(s.heap/1024)+"k "+String(s.uptime/60)+"m";
+  String h=String("DMT ")+(s.connected?"W* ":s.wifi?"W ":"- ")+(s.bleConnected?"B* ":s.ble?"B ":"- ")+(s.sd?"SD ":"-- ")+(s.nfc?"N ":"- ")+String(s.heap/1024)+"k "+String(s.uptime/60)+"m";
   String headerKey=h+String((int)page.icon);
   if(bar&&(invalid||header!=headerKey))  {
     tft.fillRect(0,0,tft.width(),26,t.panel);
@@ -138,10 +202,14 @@ void DisplayManager::render(const MenuPage& page,const Status& s,const String& t
     tft.fillRect(0,titleY-2,tft.width(),46,t.background);
     String big=page.launcher&&!page.items.empty()?page.items[page.selected].label:page.title;
     print(big.substring(0,(tft.width()-16)/12),8,titleY,t.accent,2);
-    print(page.launcher?page.title.substring(0,35):page.items.empty()?"":page.items[page.selected].label.substring(0,35),8,titleY+25,t.muted);
+    print(page.launcher?page.title.substring(0,35):page.items.empty()?"":(page.grid?page.items[page.selected].detail:page.items[page.selected].label).substring(0,35),8,titleY+25,t.muted);
     focus=f;
   }
-  int begin=titleY+50,columns=page.columns,rowH=columns>1?38:30,visibleRows=min(12,(tft.height()-begin-28)/rowH),visible=min(32,visibleRows*columns),top=max(0,page.selected/columns-visibleRows+1)*columns;
+  int begin=titleY+50,columns=page.grid?3:page.columns;
+  int rowH=page.grid?(tft.height()-begin-28)/4:columns>1?38:30;
+  int visibleRows=page.grid?4:min(12,(tft.height()-begin-28)/rowH);
+  int visible=page.grid?12:min(32,visibleRows*columns);
+  int top=page.grid?(page.selected/12)*12:max(0,page.selected/columns-visibleRows+1)*columns;
   for(int i=0;i<visible;i++)  {
     int n=top+i;
     bool selected=n==page.selected&&n<(int)page.items.size();
@@ -156,7 +224,14 @@ void DisplayManager::render(const MenuPage& page,const Status& s,const String& t
         uint16_t c=item.enabled?t.foreground:t.muted;
         tft.fillRoundRect(x+4,y+1,width-6,rowH-3,4,selected?t.selection:t.panel);
         if(selected)tft.fillRect(x+4,y+4,3,rowH-9,t.accent);
-        if(columns>1)  {
+        if(page.grid) {
+          if(item.swatch)tft.fillRoundRect(x+10,y+4,width-20,16,3,item.swatch);
+          else icon(item.icon,x+width/2-8,y+4,selected?t.accent:c);
+          int chars=(width-12)/6;
+          String label=item.label.substring(0,chars);
+          print(label,x+(width-(int)label.length()*6)/2,y+rowH-12,c);
+        }
+        else if(columns>1)  {
           if(item.swatch)tft.fillRoundRect(x+10,y+5,width-20,9,2,item.swatch);
           print(item.label.substring(0,(width-12)/6),x+9,y+23,c);
         }

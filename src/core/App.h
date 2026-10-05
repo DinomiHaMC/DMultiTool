@@ -8,6 +8,7 @@ class App  {
   // Foreground apps can reserve all five buttons and require confirmed exit.
   virtual bool ownsNavigation()const { return false; }
   virtual void onOpen()=0;
+  virtual void onOpenAlias(const String&) { onOpen(); }
   virtual void onClose()  {
   }
   virtual void update()  {

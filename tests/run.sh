@@ -3,6 +3,12 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 binary="$(mktemp /tmp/hp2000-keyboard.XXXXXX)"
 trap 'rm -f "$binary"' EXIT
+g++ -std=c++17 -Wall -Wextra -Werror -pthread -Itests/file-stubs src/services/DownloadService.cpp tests/download_test.cpp -o "$binary"
+"$binary"
+g++ -std=c++17 -Wall -Wextra -Werror -Itests/file-stubs src/services/FileBridge.cpp src/services/ShellParser.cpp tests/file_bridge_test.cpp -o "$binary"
+"$binary"
+g++ -std=c++17 -Wall -Wextra -Werror src/services/Calculator.cpp src/services/ShellParser.cpp tests/new_models_test.cpp -o "$binary"
+"$binary"
 g++ -std=c++17 -Wall -Wextra -Werror -Itests/stubs src/input/Keyboard.cpp tests/audio_control_test.cpp -o "$binary"
 "$binary"
 g++ -std=c++17 -Wall -Wextra -Werror tests/radio_memory_test.cpp -o "$binary"
@@ -19,7 +25,7 @@ g++ -std=c++17 -Wall -Wextra -Werror -Itests/stubs src/input/Keyboard.cpp tests/
 g++ -std=c++17 -Wall -Wextra -Werror src/services/NDEFCodec.cpp src/services/ScriptParser.cpp tests/codec_test.cpp -o "$binary"
 "$binary"
 
-g++ -std=c++17 -Wall -Wextra -Wno-missing-field-initializers -Itests/display-stubs src/ui/KeyboardModel.cpp src/ui/DisplayManager.cpp src/ui/Theme.cpp tests/display_test.cpp -o "$binary"
+g++ -std=c++17 -Wall -Wextra -Wno-missing-field-initializers -Itests/display-stubs src/services/Calculator.cpp src/ui/KeyboardModel.cpp src/ui/DisplayManager.cpp src/ui/Theme.cpp tests/display_test.cpp -o "$binary"
 "$binary"
-g++ -std=c++17 -Wall -Wextra -Wno-missing-field-initializers -Itests/display-stubs src/ui/KeyboardModel.cpp src/ui/DisplayManager.cpp src/ui/Theme.cpp src/ui/UI.cpp tests/ui_test.cpp -o "$binary"
+g++ -std=c++17 -Wall -Wextra -Wno-missing-field-initializers -Itests/display-stubs src/services/Calculator.cpp src/ui/KeyboardModel.cpp src/ui/DisplayManager.cpp src/ui/Theme.cpp src/ui/UI.cpp tests/ui_test.cpp -o "$binary"
 "$binary"

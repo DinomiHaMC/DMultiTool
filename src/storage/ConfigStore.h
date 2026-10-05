@@ -9,6 +9,9 @@ struct Settings  {
   bool splash=true, bootSound=true, animations=true, wrap=true, statusBar=true;
   bool serialLog=true, hardwareDebug=false, debugOverlay=false, nfcSave=true;
   uint16_t longPress=800, timeout=60, repeatDelay=450, repeatRate=140, frequency=2200;
+  uint8_t screensaver=0;
+  uint16_t customColors[7]={0x0841,0x18C3,0xFFFF,0x9CF3,0x07FF,0x224B,0xF800};
+  bool notifyGlobal=false,notifyWake=false,notifyReceive=false;
 };
 struct SavedNetwork  {
   String ssid,password;
@@ -16,7 +19,7 @@ struct SavedNetwork  {
 class ConfigStore  {
   Preferences nvs;
   bool ready=false;
-  public: String apSSID="HP2000-Test",apPassword="";
+  public: String apSSID="DMultiTool",apPassword="";
   Settings values;
   uint32_t bootId=0;
   void begin();

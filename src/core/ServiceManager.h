@@ -10,6 +10,8 @@
 #include "../services/BLEService.h"
 #include "../services/NetworkTools.h"
 #include "../services/CaptureService.h"
+#include "../services/DownloadService.h"
+#include "../services/FileBridge.h"
 enum class ServiceState  {
   Available,Unavailable,Error
 };
@@ -31,6 +33,8 @@ class ServiceManager  {
   BLEUtilityService ble;
   NetworkTools net;
   CaptureService capture;
+  DownloadService download;
+  FileBridge bridge;
   uint32_t nfcRevision=0,wifiRevision=0;
   I2CResult busResult;
   bool tagFound=false,irSent=false,wifiChanged=false,bleChanged=false;

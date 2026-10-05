@@ -1,14 +1,24 @@
 #include "ConfigStore.h"
+#include "../ui/Theme.h"
 void ConfigStore::begin()  {
   ready=nvs.begin("hp2000",false);
   if(!ready)return;
-  apSSID=nvs.getString("apSSID","HP2000-Test");
+  apSSID=nvs.getString("apSSID","DMultiTool");
+  if(apSSID=="HP2000-Test")apSSID="DMultiTool";
   apPassword=nvs.getString("apPassword","");
   values.irCarrier=constrain(nvs.getUChar("irCarrier",38),30,60);
   values.rgbAddress=nvs.getUShort("rgbAddress",0xEF00);
   values.rotation=nvs.getUChar("rotation",0);
   values.theme=nvs.getUChar("theme",0);
   values.defaultApp=nvs.getUChar("defaultApp",0);
+  if(nvs.getUChar("appLayout",0)==0) {
+    if(values.defaultApp==9)values.defaultApp=0;
+    else if(values.defaultApp==10)values.defaultApp=9;
+    else if(values.defaultApp==11)values.defaultApp=6;
+    else if(values.defaultApp==12)values.defaultApp=10;
+    nvs.putUChar("defaultApp",values.defaultApp);
+    nvs.putUChar("appLayout",1);
+  }
   values.logLevel=nvs.getUChar("logLevel",1);
   values.wifiChannel=nvs.getUChar("wifiChannel",1);
   values.sound=nvs.getBool("sound",true);
@@ -31,7 +41,13 @@ void ConfigStore::begin()  {
   values.repeatRate=nvs.getUShort("repeatRate",140);
   values.frequency=nvs.getUShort("frequency",2200);
   values.rotation%=4;
-  values.theme%=4;
+  values.theme%=ThemeManager::Count;
+  values.screensaver=nvs.getUChar("saver",0)%4;
+  values.notifyGlobal=nvs.getBool("notifyGlobal",false);
+  values.notifyWake=nvs.getBool("notifyWake",false);
+  values.notifyReceive=nvs.getBool("notifyRx",false);
+  for(int i=0;i<7;i++)values.customColors[i]=nvs.getUShort(("color"+String(i)).c_str(),values.customColors[i]);
+  ThemeManager::setCustom(values.customColors);
   values.logLevel%=4;
   values.longPress=constrain(values.longPress,400,2000);
   values.repeatDelay=constrain(values.repeatDelay,200,1500);
@@ -72,6 +88,12 @@ void ConfigStore::save()  {
   nvs.putUShort("repeatDelay",values.repeatDelay);
   nvs.putUShort("repeatRate",values.repeatRate);
   nvs.putUShort("frequency",values.frequency);
+  nvs.putUChar("saver",values.screensaver);
+  nvs.putBool("notifyGlobal",values.notifyGlobal);
+  nvs.putBool("notifyWake",values.notifyWake);
+  nvs.putBool("notifyRx",values.notifyReceive);
+  for(int i=0;i<7;i++)nvs.putUShort(("color"+String(i)).c_str(),values.customColors[i]);
+  ThemeManager::setCustom(values.customColors);
 }
 int ConfigStore::networkCount()  {
   return ready?min((int)nvs.getUChar("netCount",0),8):0;

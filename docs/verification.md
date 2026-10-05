@@ -1,44 +1,52 @@
-# Verification — Hacker Pro 2000 2.1.8
+# Verification — DMultiTool 3.0.0
 
-## Выполнено в окружении разработки
+Дата: 2026-10-06. Target: ESP32 Dev Module / ESP32-WROOM-32, Arduino core 3.3.12, Arduino CLI 1.4.1, NimBLE-Arduino 2.5.1. GPIO сохранены. Наличие рабочего оборудования подтверждено пользователем для прежней прошивки; новая версия проверена сборкой и host-тестами.
 
-Дата: 2026-10-04. Target: ESP32 Dev Module / ESP32-WROOM-32, core 3.3.12, Arduino CLI 1.4.1. Исходный проект изучен до рефакторинга; baseline собран успешно. GPIO остаются прежними. Наличие исправного железа в baseline подтверждено пользователем, а не повторным стендовым тестом агента.
+## Выполненные проверки
 
 | Проверка | Результат |
 |---|---|
-| AudioCtrl host regression | Пять Consumer commands; нет отправки без подключения / при LONG OK, ошибка отправки; реальный ADC driver: LONG OK без последующего Play/Pause, короткий/длинный LEFT, повтор громкости |
-| Baseline: `arduino-cli compile --fqbn esp32:esp32:esp32 .` | PASS: 1,052,656 flash bytes / 69,812 static RAM bytes |
-| Полная версия, default partition | Компиляция/линковка проходят; CLI size check отклоняет >1.3 MB image |
-| Полная версия 2.1.8, huge_app | PASS: 1,824,311 bytes flash (57% / 3,145,728); 108,008 bytes static RAM (32% / 327,680), 219,672 bytes оставлено для runtime |
-| NFC polling regression | PASS: RFConfiguration ответ полностью считывается/проверяется до нового запроса; ответ метки через 180 ms принимается (80 ms его пропускает), no-tag/timeout, UID bounds, corrupt/truncated response и ACK failure |
-| Radio memory policy 2.1.7 | Host tests: fallback при 29000 bytes, совместная работа при достаточной RAM, запрет паузы занятого WiFi, ошибка выключения WiFi, rollback после init failure, отложенный возврат WiFi после scan shutdown, сохранённая настройка OFF |
-| Host Keyboard tests | PASS: все ADC 0–4095, debounce, long/short OK и LEFT, repeat, UNKNOWN, rollover |
-| Classic 1K NDEF | PASS: MAD CRC 0x14, phone layout read/write, short NDEF succeeds with inaccessible later sector, 100-byte multi-sector Text, URI, TLV offsets 0/2/14/15, metadata/key/trailer preservation; no writes on size/CRC/auth/read-only failure, cancellation and corrupt read-back |
-| Host NDEF / Script parser | PASS: Text/URI, malformed/truncated records, MIME, boundaries, quotes/comments/errors |
-| Host DisplayManager | PASS: неизменённое меню не рисуется повторно, смена selection, четыре темы, portrait/landscape, sleep |
-| Host UI | PASS: wrap, confirmation No default / explicit Yes, input edit/submit, progress cancellation |
-| Fullscreen keyboard | PASS: menu state preserved, Enter submit, EN/РУ/symbol cycle, ё/Ё, Shift, UTF-8 deletion and byte bounds, complete ASCII punctuation, password masking, unchanged keyboard produces no redraw |
-| Games host logic | PASS: Snake growth/reverse/collision; 100 seeds first-safe Minesweeper + win; all tetromino rotations, row clear, game over |
-| Games / Python renderer | PASS: unchanged frame does not redraw, changed cells/widgets/selection, pause overlay; SVG/PNG inspected |
-| Real PikaPython host | PASS: Tk Button callback → label/NEC/SD, all 3 SD examples, key binding, Canvas timer, held key, SD read; infinite loop cancellation, 20KB OOM, undefined variable, recursion limit, 10 restarts |
-| Foreground exit review | Games/Python own navigation while active; LONG LEFT ignored, LONG OK opens No-default confirmation; dialog pauses execution, Yes stops Python and waits for cleanup; idle disabled while active |
-| Firmware static review | No analogRead outside input driver; no delay(1000) in main UI; fillScreen only init/splash/invalidated scene |
+| Полная сборка ESP32 / huge_app | PASS; итоговые размеры приведены ниже |
+| Сетка меню | PASS: перемещения по 3 столбцам, переход между страницами по 12 плиток, неполные строки, 1–70 элементов, wrap; долгий OK возвращает назад |
+| DisplayManager | PASS: dirty redraw, портрет/альбом, клавиатура, инженерный калькулятор, screensavers; SVG получены настоящим renderer с TFT stubs и осмотрены |
+| Calculator | PASS: приоритет операций, степени, факториал, проценты, DEG/RAD, функции, ans, пределы глубины/длины, ошибки области определения |
+| MtSh | PASS: кавычки/escape, пределы команд, относительные и абсолютные пути, запрет выхода выше корня |
+| DownloadService | PASS: настоящий код с HTTP/SD/FreeRTOS stubs; известная/неизвестная длина, пустой файл, HTTP ошибки, отмена, SD full, ошибки queue/task, CA/RAM/WiFi preflight, освобождение клиентских объектов; сохранение файла, появившегося во время загрузки |
+| FileBridge | PASS: настоящий код с SD/transport stubs; upload/download, известный CRC32, пустой файл, запрет перезаписи, ошибочный CRC/размер, SD full, обрыв связи и очистка временного файла, list, уведомления |
+| PC client | PASS: три async-теста tools/mtble.py с transport stubs; CRC, повреждённые/пустые файлы, ACK, upload, list, фрагментация, сохранение существующих файлов |
+| Android companion | PASS: javac, D8, aapt, zipalign; debug APK подписан, проверен apksigner. API 35 / build-tools 35, minSdk 26 |
+| Существующие функции | PASS: ADC/debounce/hold/repeat, UI/dialogs/keyboard, AudioCtrl, NFC polling, Classic 1K NDEF, scripts, игры, radio memory policy |
+| Настоящий PikaPython | PASS: три SD-примера, Tk callbacks, кнопки, IR/SD adapters, Canvas/timers, отмена бесконечного цикла, OOM/recursion, десять перезапусков |
+| Shell/Python syntax и whitespace | PASS: bash -n, py_compile, git diff --check |
 
 Повторяемые команды из корня:
 
 ```bash
 ./tests/run.sh
 ./tests/run-python.sh
-XDG_CACHE_HOME=/tmp/hp2000-cache ./scripts/build.sh
+python3 tests/mtble_test.py
+XDG_CACHE_HOME=/tmp/hp2000-cache ./scripts/build.sh --jobs 2 --export-binaries
+DMULTITOOL_ANDROID_SDK=/tmp/dmt-android-sdk bash companion/android/build.sh
 ```
 
-Build helper задаёт FQBN `esp32:esp32:esp32`, `PartitionScheme=huge_app` и optional commit define. Локальный partitions.csv задаёт factory app 3 MB и сохраняет NVS offset. Default CLI size limit не учитывает размер локальной partition без board option.
+Build helper задаёт FQBN esp32:esp32:esp32, PartitionScheme=huge_app и FW_COMMIT из Git. Экспортированный образ: build/DMultiTool.bin, application offset 0x10000. Для Android нужны JDK и Android SDK; SDK использован из /tmp, системная установка не менялась.
 
-В ходе сборок стандартный BLE stack давал IRAM overflow. Применён NimBLE-Arduino 2.5.1; libc strftime заменён ограниченным snprintf календарных полей, после чего IRAM link проходит. В final configuration нет обещания совместимости с другой core/library version без новой сборки.
+Linker-отчёт: около 1,95 MB flash (62% из 3,145,728), 109,256 bytes static RAM (33% из 327,680). Это не измерение свободного heap при включённых WiFi/Bluetooth/Python; библиотеки и стеки выделяют память во время работы. Итоговый образ повторно собирается после коммита, чтобы FW_COMMIT соответствовал исходникам.
 
-Host screenshots созданы настоящим renderer с TFT stubs; не доказывают электрическую работу ST7789. Для настоящего PikaPython на 64-bit host пик GUI/native примера ~21 KB с адаптером tkinter и заголовками выделений; это не измерение heap ESP32. Worker имеет 32KB stack, VM budget 64KB, проверяет свободный heap >=125000 и largest block >=36000 до запуска. Для Python FreeRTOS scheduling, достаточность stack, задержки SD, IR carrier и cancel latency требуют стенда.
+Host-модели HTTP и Bluetooth не подтверждают реальное TLS-соединение, radio scheduling, pairing, дальность или пропускную способность. Android APK собран, но на телефоне не установлен. SVG renderer не проверяет электрическую работу TFT. Firmware в ESP32 автоматически не загружалась.
 
-Host tests не моделируют FreeRTOS scheduling, radio controller, PN532, SD hardware или pairing с конкретным OS. Статическая RAM из отчёта linker не включает runtime heap библиотек и стеков задач.
+## Новые проверки на оборудовании
+
+1. Launcher и вложенные меню: 3×4 плитки, все направления, переход страниц, удержание OK; проверить восстановление старых настроек/default app и отсутствие удалённых вкладок.
+2. MtSh: открыть из разных папок, все команды на тестовых файлах, quoted filenames; HTTP/HTTPS, chunked response, отмена, SD full. HTTPS требует правильных часов и CA; встроены ISRG X1/X2, другие roots можно положить в /config/ca.pem.
+3. Scripts/Python: оба раздела открываются из Scripts, OPEN_APP Python сохраняет прежний смысл; запуск/остановка и возврат в общий раздел.
+4. Calculator: все клавиши, базовый/инженерный режим, DEG/RAD, ошибки выражений, обе ориентации.
+5. Темы: все девять вариантов, изменение семи цветов Custom, сохранение после reboot; Pipes/Cosmos/Matrix и первая кнопка после сна.
+6. File transfer: pairing ПК, ls/get/put через tools/mtble.py, двоичные и пустые файлы, CRC, отключение/повторное подключение. WROOM-32 не поддерживает USB mass storage через USB-UART; используется BLE.
+7. Android: выбрать сопряжённый DMultiTool HID, разрешить доступ к уведомлениям, тестовое и реальное уведомления; Receiver/Global popups/Wake screen, уведомления во время игр/Python/калькулятора и при потухшем экране. Проверить переподключение и фоновые ограничения конкретного телефона.
+8. Совместная работа WiFi/BLE, запуск Python с проверкой heap, повторные переключения, AudioCtrl после уведомлений и передач. Новые очереди и GATT service расходуют runtime RAM; реальные heap/stack watermark требуют платы.
+
+Ниже сохранены сведения о прежних исправлениях NFC/BLE и проверки остальных функций.
 
 ## NFC correction 2.1.1
 
@@ -52,7 +60,7 @@ Tag selection считывает полный I2C frame с проверкой he
 
 ## Стендовый checklist после upload
 
-AudioCtrl 2.1.8: Utils добавлен в конец registry, прежние defaultApp indices сохранены. Используется HID input report 3 / Consumer page с usages E9/EA/B5/B6/CD и отпусканием через 20 ms в BLE service. LONG OK выходит сразу, LONG LEFT игнорируется; ownsNavigation предотвращает общий возврат в launcher и idle sleep во время работы пульта. UI содержит четыре строки, подходит для обеих ориентаций. Проверены host input routing и actual ADC driver, полная сборка ESP32. На плате проверить pairing с Android/iOS, громкость/трек/PlayPause в приложении телефона, disconnect/reconnect, выход во время нажатия, 10 повторных запусков, сохранение уже включённого BLE и возврат WiFi при выходе из временного BLE. Host tests не подтверждают совместимость конкретного телефона.
+AudioCtrl 2.1.8: Utils добавлен в конец registry, прежние defaultApp indices сохранены. Используется HID input report 3 / Consumer page с usages E9/EA/B5/B6/CD и отпусканием через 20 ms в BLE service. LONG OK выходит сразу, LONG LEFT игнорируется; ownsNavigation предотвращает общий возврат в launcher и idle sleep во время работы пульта. AudioCtrl сохраняет четыре строки; остальные меню используют сетку 3×4. Проверены host input routing и actual ADC driver, полная сборка ESP32. На плате проверить pairing с Android/iOS, громкость/трек/PlayPause в приложении телефона, disconnect/reconnect, выход во время нажатия, 10 повторных запусков, сохранение уже включённого BLE и возврат WiFi при выходе из временного BLE. Host tests не подтверждают совместимость конкретного телефона.
 
 BLE 2.1.7 (2026-10-05): пользователь сообщил 29000 bytes до запуска BLE. NetworkTools worker/очереди переведены на создание для одной операции: worker публикует результат и завершается, main task освобождает очередь только после публикации workerDone. Постоянный стек 12 KB и queues больше не расходуются на idle. ServiceManager при низкой RAM выключает WiFi перед BLE init, сохраняя настройку WiFi в NVS. Не прерываются активные AP/net jobs/capture. После полного BLE shutdown WiFi radio возвращается; прежнее сетевое подключение автоматически не гарантируется. Политика покрыта host regression; реальные heap после отключения WiFi, BLE scan/HID и 10 повторных сетевых операций требуют платы.
 
@@ -65,7 +73,7 @@ BLE 2.1.6 (2026-10-05): core 3.3.12 `initArduino()` освобождает па�
 5. IR: NEC и raw на тестовом приёмнике; измерить carrier GPIO17 при включённых UI clicks GPIO16. Sound закреплён за LEDC timer 3, IR использует auto allocation. Проверить конкретный RGB remote profile и назначенные Remote кнопки.
 6. WiFi: scan/hidden/open network, пароль со спецсимволами, saved connect/forget, timeout/cancel, current IP/NTP. Ping/DNS/64 hosts/port range на собственной сети, TCP client/listener и HTTP body/chunked, cancel во время работы. AP SSID/password/channel и остановка.
 7. PCAP: подключиться к своей AP, запустить запись ≤30 s, открыть в Wireshark, проверить linktype IEEE802_11 и relative timestamps, own BSSID management filter, отсутствие data frames. Повторить cancel и работу без SD в Packet Monitor.
-8. BLE: scanner/device info, собственный advertisement, включение/выключение несколько раз, cancel scan → disable → enable. Pair HP2000 HID на собственном host с US layout, manual text/Enter/arrows/media, mouse move/click/scroll. Проверить punctuation `/.,`, release reports, reconnect и память при совместном WiFi.
+8. BLE: scanner/device info, собственный advertisement, включение/выключение несколько раз, cancel scan → disable → enable. Pair DMultiTool HID на собственном host с US layout, manual text/Enter/arrows/media, mouse move/click/scroll. Проверить punctuation `/.,`, release reports, reconnect и память при совместном WiFi.
 9. Script: `examples/sd/scripts/hello.script`, current line/Cancel, DELAY не блокирует навигацию, синтаксическая ошибка, execution limits, OPEN_APP. Перепроверить отсутствие действий после выхода; начатая IR передача может закончиться в worker.
 10. Tools: real ADC, heap/min/largest block, I2C scanner, Serial send/receive и reboot No/Yes. Developer levels и отсутствие WiFi password в log.
 11. Games: Snake направления/пауза/столкновение, Minesweeper первый ход/двойной OK/победа, Tetris повороты/линии/ускорение. LONG LEFT не выходит; LONG OK → No возобновляет, Yes закрывает. Проверить portrait/landscape.

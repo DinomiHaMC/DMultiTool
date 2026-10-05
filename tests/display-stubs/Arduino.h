@@ -14,6 +14,8 @@ class String {
  String(unsigned int n,int base=10):String((unsigned long)n,base){}
  String& operator+=(char c){text+=c;return *this;}String& operator+=(const String& s){text+=s.text;return *this;}char operator[](size_t i)const{return text[i];}void remove(size_t start){text.erase(start);}
  bool isEmpty()const{return text.empty();}size_t length()const{return text.length();}const char* c_str()const{return text.c_str();}
+ int indexOf(char c)const{auto p=text.find(c);return p==std::string::npos?-1:int(p);}
+ bool startsWith(const String& prefix)const{return text.rfind(prefix.text,0)==0;}
  String substring(size_t start,size_t end=std::string::npos)const{return start>=text.size()?String():String(text.substr(start,end==std::string::npos?end:end-start));}
  friend String operator+(const String& a,const String& b){return String(a.text+b.text);}
  friend bool operator==(const String& a,const String& b){return a.text==b.text;}

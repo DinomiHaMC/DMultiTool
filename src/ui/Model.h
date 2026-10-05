@@ -18,12 +18,13 @@ struct MenuItem  {
   uint16_t swatch=0;
 };
 struct MenuPage  {
-  String title,hint="LEFT Back   OK Select";
+  String title,hint="Arrows Move  OK Open  Hold OK Back";
   Icon icon=Icon::App;
   std::vector<MenuItem> items;
   int selected=0;
   bool launcher=false;
   uint8_t columns=1;
+  bool grid=false;
   Action onBack;
 };
 struct Status  {

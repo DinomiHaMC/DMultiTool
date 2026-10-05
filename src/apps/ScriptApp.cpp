@@ -1,6 +1,7 @@
 #include "ScriptApp.h"
 void ScriptApp::home()  {
   auto p=menu("Scripts");
+  p.onBack=rootBack;
   if(!s.sd.list("/scripts"))  {
     ui.message("Scripts","SD card not mounted");
     return;

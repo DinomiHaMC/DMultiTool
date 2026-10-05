@@ -6,7 +6,7 @@ void PythonApp::browse(const String& path,uint32_t page) {
   ui.reset();auto p=menu(path);
   p.hint="OK Run / Open | Hold OK in app: exit";
   p.onBack=[this] {
-    if(directory=="/python")ctx.apps->launcher();
+    if(directory=="/python") { if(rootBack)rootBack();else ctx.apps->launcher(); }
     else { int slash=directory.lastIndexOf('/');browse(directory.substring(0,slash)); }
   };
   if(offset)item(p,"Previous files",[this]{browse(directory,offset-Config::MaxEntries);});

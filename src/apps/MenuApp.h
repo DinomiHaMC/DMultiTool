@@ -10,6 +10,8 @@ class MenuApp:public App  {
   MenuPage menu(const String& title)  {
     MenuPage p;
     p.title=title;
+    p.grid=true;
+    p.columns=3;
     p.icon=icon();
     return p;
   }

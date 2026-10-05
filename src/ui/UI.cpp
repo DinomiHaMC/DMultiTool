@@ -1,4 +1,5 @@
 #include "UI.h"
+#include "GridNavigation.h"
 void UI::reset()  {
   history.clear();
   editing=false;
@@ -49,7 +50,7 @@ void UI::handle(InputEvent e)  {
     else if(e==InputEvent::Down)keyboard.move(KeyboardModel::Direction::Down);
     else if(e==InputEvent::Left)keyboard.move(KeyboardModel::Direction::Left);
     else if(e==InputEvent::Right)keyboard.move(KeyboardModel::Direction::Right);
-    else if(e==InputEvent::OkLong)keyboard.erase();
+    else if(e==InputEvent::OkLong) { back();return; }
     else if(e==InputEvent::Ok && keyboard.press()) {
       String value=keyboard.value.c_str();
       auto callback=inputDone;
@@ -63,12 +64,17 @@ void UI::handle(InputEvent e)  {
     dirty=true;
     return;
   }
-  if(e==InputEvent::Left)  {
+  if(e==InputEvent::OkLong)  {
     back();
     return;
   }
   int n=current.items.size();
   if(!n)return;
+  if(current.grid&&(e==InputEvent::Up||e==InputEvent::Down||e==InputEvent::Left||e==InputEvent::Right)) {
+    current.selected=GridNavigation::move(current.selected,n,3,e==InputEvent::Left?-1:e==InputEvent::Right?1:0,e==InputEvent::Up?-1:e==InputEvent::Down?1:0,settings.wrap);
+    dirty=true;
+    return;
+  }
   if(e==InputEvent::Up||e==InputEvent::Down)  {
     int next=current.selected+(e==InputEvent::Up?-(int)current.columns:(int)current.columns);
     current.selected=settings.wrap?(next+n)%n:constrain(next,0,n-1);
@@ -85,7 +91,7 @@ void UI::handle(InputEvent e)  {
     toast("Not installed",ToastType::Warning);
     return;
   }
-  Action callback=(e==InputEvent::Right||e==InputEvent::OkLong)?item.context:e==InputEvent::Ok?item.action:Action();
+  Action callback=e==InputEvent::Right?item.context:e==InputEvent::Ok?item.action:Action();
   if(callback)callback();
 }
 void UI::draw()  {

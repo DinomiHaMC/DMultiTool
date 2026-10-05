@@ -3,17 +3,28 @@
 #include <atomic>
 #include <NimBLEDevice.h>
 #include <NimBLEHIDDevice.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/queue.h>
+#include "BridgeChannel.h"
 struct BLEInfo  {
   String name,address,services,manufacturer;
   int rssi=0;
 };
-class BLEUtilityService  {
+class BLEUtilityService:public BridgeChannel  {
+  class BridgeCallbacks:public NimBLECharacteristicCallbacks {
+    BLEUtilityService& owner;
+  public:
+    explicit BridgeCallbacks(BLEUtilityService& service):owner(service) {}
+    void onWrite(NimBLECharacteristic* characteristic,NimBLEConnInfo& info)override;
+  } bridgeCallbacks{*this};
+  QueueHandle_t frames=nullptr;
+  NimBLECharacteristic* bridgeTX=nullptr;
   NimBLEScan* scanner=nullptr;
   NimBLEServer* server=nullptr;
   NimBLEHIDDevice* hid=nullptr;
   NimBLECharacteristic *keyboard=nullptr,*mouse=nullptr,*media=nullptr;
   bool initialized=false,releasePending=false;
-  uint32_t keyTime=0;
+  uint32_t keyTime=0,bridgeRetry=0;
   String typing;
   String error;
   size_t typed=0;
@@ -38,6 +49,14 @@ class BLEUtilityService  {
   bool advertise(const String& name,const String& manufacturer);
   void stop();
   bool startHID(bool reconnect=false);
+  bool startBridge() { return startHID(true); }
+  void keepBridgeAvailable() {
+    if(millis()-bridgeRetry<1000)return;
+    bridgeRetry=millis();
+    if(enabled&&!scanning&&(!server||(!connected()&&!NimBLEDevice::getAdvertising()->isAdvertising())))startBridge();
+  }
+  bool receive(BLEFrame& frame) { return frames&&xQueueReceive(frames,&frame,0)==pdTRUE; }
+  bool transmit(const uint8_t* bytes,size_t size);
   bool connected()const;
   bool typeText(const String& text);
   bool key(uint8_t usage,uint8_t modifier=0);

@@ -31,10 +31,11 @@ void ServiceManager::begin()  {
   }
   display.bootStatus(String(ir.ready?"IR OK":"IR FAIL")+" | "+(wifi.enabled?"WiFi ON":"WiFi OFF")+" | "+(ble.enabled?"BLE ON":"BLE OFF"));
   if(config.values.bootSound)beep(2600,90);
+  if(config.values.notifyReceive&&setBLEEnabled(true)&&!ble.startBridge())LOG_WARN("BLE","Notification bridge failed to start");
 }
 bool ServiceManager::setBLEEnabled(bool on) {
   const bool wasPaused=wifiPausedForBLE;
-  const bool mayPause=!net.busy&&!capture.active&&(WiFi.getMode()&WIFI_MODE_AP)==0;
+  const bool mayPause=!net.busy&&!download.active&&!capture.active&&(WiFi.getMode()&WIFI_MODE_AP)==0;
   bool ok=RadioMemoryPolicy::setBLE(ble,wifi,on,mayPause,config.values.wifi,wifiPausedForBLE);
   if(!wasPaused&&wifiPausedForBLE)LOG_INFO("BLE","WiFi temporarily OFF to free RAM");
   return ok;
@@ -64,9 +65,12 @@ void ServiceManager::update()  {
   wifiChanged=wifi.update();
   if(wifiChanged)wifiRevision++;
   bleChanged=ble.update();
+  if(config.values.notifyReceive)ble.keepBridgeAvailable();
+  bridge.update(ble,sd,config.values.notifyReceive);
   RadioMemoryPolicy::restore(ble,wifi,config.values.wifi,wifiPausedForBLE);
   irSent=ir.update();
   net.update();
+  download.update();
   capture.update();
   buzzer.update();
   logger.update(sd.mounted);

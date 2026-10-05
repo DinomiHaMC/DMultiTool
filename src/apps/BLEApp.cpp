@@ -83,14 +83,14 @@ void BLEApp::info(int i)  {
 void BLEApp::advertiser()  {
   if(!ensure())return;
   if(s.ble.advertising)  {
-    ui.confirm("Stop advertising?","HP2000 own advertisement",[this]  {
+    ui.confirm("Stop advertising?","DMultiTool own advertisement",[this]  {
       s.ble.stop();ui.toast("Advertisement stopped");
     }
     );
     return;
   }
-  ui.textInput("Advertised name","HP2000-Test",[this](String name)  {
-    ui.textInput("Manufacturer bytes","HP2000",[this,name](String data)  {
+  ui.textInput("Advertised name","DMultiTool",[this](String name)  {
+    ui.textInput("Manufacturer bytes","DMT",[this,name](String data)  {
       report(s.ble.advertise(name,data),"Advertising (0.5..1s)","Scan/connection busy or invalid data");
     },6);
   },18);
@@ -102,7 +102,7 @@ void BLEApp::keyboard()  {
     return;
   }
   auto p=menu("BLE Keyboard");
-  p.hint="Pair HP2000 HID on own host";
+  p.hint="Pair DMultiTool HID on own host";
   item(p,"Type text",[this]  {
     ui.textInput("Type ASCII","",[this](String text)  {
       for(size_t i=0;i<text.length();i++)if((uint8_t)text[i]>126) {

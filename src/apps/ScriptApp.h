@@ -13,6 +13,7 @@ class ScriptApp:public MenuApp  {
   void show();
   void execute(const String& source);
   public:using MenuApp::MenuApp;
+  Action rootBack;
   const char* name()const override  {
     return "Scripts";
   }

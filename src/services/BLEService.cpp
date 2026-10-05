@@ -26,7 +26,7 @@ bool BLEUtilityService::initialize()  {
     LOG_WARN("BLE","%s",error.c_str());
     return false;
   }
-  if(!NimBLEDevice::init("Hacker Pro 2000")) {
+  if(!NimBLEDevice::init("DMultiTool")) {
     error="BLE stack init failed\nFree RAM: "+String(free)+"\nSee Serial at 115200";
     LOG_ERROR("BLE","%s",error.c_str());
     return false;
@@ -40,6 +40,16 @@ bool BLEUtilityService::initialize()  {
   error="";
   LOG_INFO("BLE","Ready: heap=%lu",(unsigned long)ESP.getFreeHeap());
   return true;
+}
+void BLEUtilityService::BridgeCallbacks::onWrite(NimBLECharacteristic* characteristic,NimBLEConnInfo&) {
+  const auto& value=characteristic->getValue();
+  if(!owner.frames||value.size()<1||value.size()>sizeof(BLEFrame::bytes))return;
+  BLEFrame frame;frame.size=value.size();memcpy(frame.bytes,value.data(),frame.size);
+  xQueueSend(owner.frames,&frame,0);
+}
+bool BLEUtilityService::transmit(const uint8_t* bytes,size_t size) {
+  if(!connected()||!bridgeTX||size>20)return false;
+  return bridgeTX->notify(bytes,size);
 }
 bool BLEUtilityService::setEnabled(bool on)  {
   if(on&&!initialize())return false;
@@ -64,6 +74,8 @@ void BLEUtilityService::shutdown() {
   server=nullptr;
   keyboard=mouse=media=nullptr;
   initialized=false;
+  if(frames)vQueueDelete(frames);
+  frames=nullptr;bridgeTX=nullptr;
   releasePending=false;
 }
 void BLEUtilityService::stop()  {
@@ -130,12 +142,18 @@ bool BLEUtilityService::advertise(const String& name,const String& manufacturer)
 bool BLEUtilityService::startHID(bool reconnect)  {
   if(!enabled||scanning||!initialize())return false;
   if(!hid)  {
+    if(!frames)frames=xQueueCreate(4,sizeof(BLEFrame));
+    if(!frames)return false;
     server=NimBLEDevice::createServer();
+    auto* bridge=server->createService("6e400001-b5a3-f393-e0a9-e50e24dcca9e");
+    auto* rx=bridge->createCharacteristic("6e400002-b5a3-f393-e0a9-e50e24dcca9e",NIMBLE_PROPERTY::WRITE|NIMBLE_PROPERTY::WRITE_ENC,200);
+    bridgeTX=bridge->createCharacteristic("6e400003-b5a3-f393-e0a9-e50e24dcca9e",NIMBLE_PROPERTY::NOTIFY,20);
+    rx->setCallbacks(&bridgeCallbacks);
     hid=new NimBLEHIDDevice(server);
     keyboard=hid->getInputReport(1);
     mouse=hid->getInputReport(2);
     media=hid->getInputReport(3);
-    hid->setManufacturer("Hacker Pro 2000");
+    hid->setManufacturer("DMultiTool");
     hid->setPnp(2,0xFFFF,0x2000,0x0200);
     hid->setHidInfo(0,1);
     hid->setReportMap(reportMap,sizeof(reportMap));
@@ -148,7 +166,7 @@ bool BLEUtilityService::startHID(bool reconnect)  {
   adv->stop();
   NimBLEAdvertisementData data;
   data.setFlags(0x06);
-  data.setName("HP2000 HID");
+  data.setName("DMultiTool HID");
   data.setCompleteServices(NimBLEUUID((uint16_t)0x1812));
   if(!adv->setAdvertisementData(data))return false;
   adv->setAppearance(HID_KEYBOARD);

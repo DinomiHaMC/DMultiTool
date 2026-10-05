@@ -3,11 +3,11 @@ void AppManager::add(App& app)  {
   if(count<16)registry[count++]=&app;
 }
 bool AppManager::open(const String& name)  {
-  for(int i=0;i<count;i++)if(name==registry[i]->name())  {
+  for(int i=0;i<count;i++)if(name==registry[i]->name()||(name=="Python"&&String(registry[i]->name())=="Scripts"))  {
     if(current)current->onClose();
     context.ui.reset();
     current=registry[i];
-    current->onOpen();
+    current->onOpenAlias(name);
     return true;
   }
   return false;
@@ -22,10 +22,6 @@ void AppManager::draw()  {
   if(current)current->draw();
 }
 void AppManager::handleInput(InputEvent e)  {
-  if(e==InputEvent::BackLong&&(!current||!current->ownsNavigation()))  {
-    launcher();
-    return;
-  }
   if(current)current->handleInput(e);
 }
 App* AppManager::find(const String& name)  {

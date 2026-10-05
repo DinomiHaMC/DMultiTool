@@ -20,6 +20,7 @@ class IdleManager  {
   }
   bool update(ServiceManager& services,InputEvent event);
   void keepAwake() { lastActivity=millis(); }
+  void wake(ServiceManager& services) { off=false;suppress=false;lastActivity=millis();services.display.sleep(false);services.display.invalidate(); }
   bool asleep()const  {
     return off;
   }

@@ -3,6 +3,9 @@
 void UtilsApp::home() {
   auto p=menu("Utils");
   item(p,"AudioCtrl",[this]{startAudio();},"Bluetooth audio remote");
+  item(p,"Calculator",[this]{calculatorActive=true;s.display.invalidate();ui.dirty=true;},"Basic / scientific keyboard");
+  item(p,"File transfer",[this]{transfer();},"microSD files over Bluetooth");
+  item(p,"Notifications",[this]{notifications();},"Android notification bridge");
   ui.page(std::move(p),false);
 }
 void UtilsApp::startAudio() {
@@ -32,25 +35,39 @@ void UtilsApp::startAudio() {
 void UtilsApp::stopAudio() {
   if(!audioActive)return;
   s.ble.stop();
-  if(ownsBLE)s.setBLEEnabled(false);
+  if(ownsBLE&&!s.config.values.notifyReceive)s.setBLEEnabled(false);
   audioActive=ownsBLE=false;
 }
 void UtilsApp::audioPage() {
   auto p=menu("AudioCtrl");
+  p.grid=false;p.columns=1;
   p.hint="Hold OK: exit to Utils";
   // Four rows fit both portrait and landscape; arrows belong to the remote.
-  item(p,phoneConnected?"Phone connected":"Waiting for phone",{},phoneConnected?lastCommand:"Pair: HP2000 HID");
+  item(p,phoneConnected?"Phone connected":"Waiting for phone",{},phoneConnected?lastCommand:"Pair: DMultiTool HID");
   item(p,"UP / DOWN",{},"Volume + / -");
   item(p,"RIGHT / LEFT",{},"Next / previous track");
   item(p,"OK",{},"Play / pause");
   ui.page(std::move(p),false);
 }
 void UtilsApp::handleInput(InputEvent event) {
+  if(transferActive) {
+    if(event==InputEvent::OkLong) { onClose();home(); }
+    return;
+  }
+  if(calculatorActive) {
+    if(event==InputEvent::OkLong) { calculatorActive=false;s.display.invalidate();home();return; }
+    if(event==InputEvent::Left)calculator.move(-1,0);
+    if(event==InputEvent::Right)calculator.move(1,0);
+    if(event==InputEvent::Up)calculator.move(0,-1);
+    if(event==InputEvent::Down)calculator.move(0,1);
+    if(event==InputEvent::Ok)calculator.press();
+    ui.dirty=true;return;
+  }
   if(!audioActive) { ui.handle(event);return; }
   auto result=AudioControl::handle(event,s.ble.connected(),[this](uint16_t command){return s.ble.consumer(command);});
   if(result==AudioControl::Result::Exit) { stopAudio();home();return; }
   if(result==AudioControl::Result::Disconnected) {
-    ui.toast("Pair HP2000 HID on phone",ToastType::Warning);
+    ui.toast("Pair DMultiTool HID on phone",ToastType::Warning);
     return;
   }
   if(result==AudioControl::Result::Failed) {
@@ -71,6 +88,7 @@ void UtilsApp::handleInput(InputEvent event) {
   }
 }
 void UtilsApp::update() {
+  if(transferActive&&millis()-transferRefresh>500) { transferRefresh=millis();transferPage();return; }
   if(!audioActive)return;
   const bool connected=s.ble.connected();
   if(connected!=phoneConnected) {
@@ -78,4 +96,46 @@ void UtilsApp::update() {
     lastCommand="Ready";
     audioPage();
   }
+}
+void UtilsApp::transfer() {
+  if(s.download.active||s.ble.scanning) { ui.message("File transfer","Finish download / BLE scan first");return; }
+  transferOwnsBLE=!s.ble.enabled;
+  if(!s.setBLEEnabled(true)||!s.ble.startBridge()) {
+    if(transferOwnsBLE)s.setBLEEnabled(false);
+    transferOwnsBLE=false;ui.message("File transfer","Bluetooth bridge failed\n"+s.ble.lastError());return;
+  }
+  transferActive=true;s.bridge.enable(true);transferPage();
+}
+void UtilsApp::transferPage() {
+  ui.rows("File transfer",String(s.ble.connected()?"PC connected":"Pair DMultiTool HID")+"\n"+s.bridge.status+"\nPC: tools/mtble.py\nHold OK to stop",false);
+  ui.model().hint="Hold OK: exit";
+}
+void UtilsApp::notifications(bool push) {
+  auto p=menu("Notifications");
+  item(p,"Receiver",[this] {
+    bool next=!s.config.values.notifyReceive;
+    if(next&&(!s.setBLEEnabled(true)||!s.ble.startBridge())) { ui.message("Notifications","Bluetooth start failed\n"+s.ble.lastError());return; }
+    s.config.values.notifyReceive=next;
+    if(next)s.config.values.ble=true;
+    s.config.save();notifications(false);
+  },s.config.values.notifyReceive?"On":"Off");
+  item(p,"Global popups",[this] {
+    s.config.values.notifyGlobal=!s.config.values.notifyGlobal;s.config.save();notifications(false);
+  },s.config.values.notifyGlobal?"On":"Off");
+  item(p,"Wake screen",[this] {
+    s.config.values.notifyWake=!s.config.values.notifyWake;s.config.save();notifications(false);
+  },s.config.values.notifyWake?"On":"Off");
+  item(p,"Latest",[this]{ui.rows("Notification",s.bridge.notification.isEmpty()?"No notifications received":s.bridge.notification);});
+  item(p,"Setup",[this]{ui.message("Android setup","Install companion/android app\nPair DMultiTool HID\nSelect device in companion\nGrant notification access\nEnable Receiver here");});
+  ui.page(std::move(p),push);
+}
+void UtilsApp::onClose() {
+  stopAudio();calculatorActive=false;
+  if(transferActive) {
+    s.bridge.enable(false);
+    if(transferOwnsBLE&&!s.config.values.notifyReceive)s.setBLEEnabled(false);
+    else if(!s.config.values.notifyReceive)s.ble.stop();
+  }
+  transferActive=transferOwnsBLE=false;
+  s.display.invalidate();
 }

@@ -1,5 +1,5 @@
 # Bounded demonstration; no IR transmission or external connection.
-PRINT "Hello from Hacker Pro 2000"
+PRINT "Hello from DMultiTool"
 BEEP 2000 100
 DELAY 500
 PRINT "Done"

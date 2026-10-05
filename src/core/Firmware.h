@@ -11,10 +11,10 @@
 #include "../apps/ScriptApp.h"
 #include "../apps/ToolsApp.h"
 #include "../apps/SettingsApp.h"
-#include "../apps/AboutApp.h"
 #include "../apps/GamesApp.h"
 #include "../apps/PythonApp.h"
 #include "../apps/UtilsApp.h"
+#include "../apps/ScriptingApp.h"
 class Firmware  {
   ServiceManager services;
   UI ui  {
@@ -54,15 +54,15 @@ class Firmware  {
   SettingsApp settings  {
     context
   };
-  AboutApp about  {
-    context
-  };
   GamesApp games { context };
   PythonApp python { context };
+  ScriptingApp scripting { context,scripts,python };
   UtilsApp utils { context };
   uint32_t statusAt=0;
   uint16_t frames=0;
   bool connected=false;
+  uint32_t notificationRevision=0,notificationAt=0;
+  bool notificationVisible=false;
   public:void begin();
   void update();
 };

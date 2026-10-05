@@ -14,6 +14,7 @@ bool IdleManager::update(ServiceManager& s,InputEvent event)  {
       off=false;
       suppress=true;
       s.display.sleep(false);
+      s.display.invalidate();
     }
   }
   if(suppress)  {
@@ -22,8 +23,10 @@ bool IdleManager::update(ServiceManager& s,InputEvent event)  {
   }
   if(s.config.values.timeout&&millis()-lastActivity>s.config.values.timeout*1000UL&&!off)  {
     off=true;
-    s.display.sleep(true);
+    s.display.sleep(s.config.values.screensaver==0);
+    s.display.invalidate();
   }
-  if(off&&millis()-lastActivity>300000)sleep.idleSleep(!s.wifi.enabled&&!s.ble.radioActive()&&!s.ir.busy&&!s.net.busy&&!s.nfc.busScanning&&!s.nfc.scanRequested&&!s.nfc.ndefBusy);
+  if(off&&s.config.values.screensaver)s.display.screensaver(s.config.values.screensaver,millis(),s.config.values.theme);
+  if(off&&!s.config.values.screensaver&&millis()-lastActivity>300000)sleep.idleSleep(!s.wifi.enabled&&!s.ble.radioActive()&&!s.ir.busy&&!s.net.busy&&!s.download.active&&!s.nfc.busScanning&&!s.nfc.scanRequested&&!s.nfc.ndefBusy);
   return false;
 }
