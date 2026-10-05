@@ -69,7 +69,7 @@ void ToolsApp::home()  {
   ui.page(std::move(p),false);
 }
 void ToolsApp::system()  {
-  String text="Chip: "+String(ESP.getChipModel())+" rev "+ESP.getChipRevision()+"\nCores: "+ESP.getChipCores()+"\nCPU: "+ESP.getCpuFreqMHz()+" MHz\nFlash: "+ESP.getFlashChipSize()/1024+" KB\nHeap: "+ESP.getHeapSize()+"\nFree: "+ESP.getFreeHeap()+"\nMinimum: "+ESP.getMinFreeHeap()+"\nMAC: "+WiFi.macAddress()+"\nUptime: "+millis()/1000+" s\nReset reason: "+(int)esp_reset_reason()+"\nCore: " ESP_ARDUINO_VERSION_STR "\nFirmware: " FW_VERSION;
+  String text="Chip: "+String(ESP.getChipModel())+" rev "+ESP.getChipRevision()+"\nCores: "+ESP.getChipCores()+"\nCPU: "+ESP.getCpuFreqMHz()+" MHz\nFlash: "+ESP.getFlashChipSize()/1024+" KB\nHeap: "+ESP.getHeapSize()+"\nFree: "+ESP.getFreeHeap()+"\nMinimum: "+ESP.getMinFreeHeap()+"\nMAC: "+WiFi.macAddress()+"\nUptime: "+millis()/1000+" s\nReset reason: "+(int)esp_reset_reason()+"\nCore: " ESP_ARDUINO_VERSION_STR "\nFirmware: " FW_VERSION "\nCommit: " FW_COMMIT;
   bool same=ui.model().title=="System Info";
   int selected=ui.model().selected;
   ui.rows("System Info",text,!same);
