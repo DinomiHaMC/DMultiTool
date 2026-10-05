@@ -42,8 +42,12 @@ void DisplayManager::notification(const String& text,uint8_t theme) {
   tft.drawRoundRect(6,y,tft.width()-12,74,5,t.accent);
   print("Notification",14,y+8,t.accent);
   int chars=(tft.width()-28)/6;
-  print(text.substring(0,chars),14,y+28,t.foreground);
-  print(text.substring(chars,chars*2),14,y+46,t.foreground);
+  std::string value=text.c_str();size_t offset=0;
+  for(int row=0;row<2;row++) {
+    size_t start=offset;
+    for(int col=0;col<chars&&offset<value.size();col++)KeyboardModel::next(value,offset);
+    print(value.substr(start,offset-start).c_str(),14,y+28+row*18,t.foreground);
+  }
 }
 void DisplayManager::renderCalculator(const CalculatorModel& model,uint8_t theme) {
   const auto& t=ThemeManager::get(theme);

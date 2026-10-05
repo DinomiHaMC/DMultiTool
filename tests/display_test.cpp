@@ -18,6 +18,10 @@ int main(){
  count=MockTFT::shapes.size();display.sleep(true);display.render(launcher,status,"",ToastType::Info,ThemeManager::Custom,true);assert(MockTFT::shapes.size()==count);display.sleep(false);
  display.rotation(1);display.render(launcher,status,"",ToastType::Info,0,true);MockTFT::write("docs/screenshots/launcher-landscape.svg",320,240);
  display.rotation(0);
+ display.invalidate();display.render(launcher,status,"",ToastType::Info,4,true);
+ count=MockTFT::shapes.size();display.notification("A: Сообщение с телефона: проверка длинной русской строки",4);
+ for(size_t i=count;i<MockTFT::shapes.size();i++)assert(MockTFT::shapes[i].find(">?</text>")==std::string::npos);
+ MockTFT::write("docs/screenshots/notification-russian.svg",240,320);
  CalculatorModel calc;calc.expression="sin(30)+sqrt(81)";calc.result="9.5";calc.scientific=true;
  display.invalidate();display.renderCalculator(calc,4);MockTFT::write("docs/screenshots/calculator-scientific.svg",240,320);
  count=MockTFT::shapes.size();display.renderCalculator(calc,4);assert(count==MockTFT::shapes.size());
