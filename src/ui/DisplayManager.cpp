@@ -403,3 +403,19 @@ void DisplayManager::renderPython(const PythonView& view,uint8_t theme) {
   }
   previousPython=view;pythonTheme=theme;pythonVisible=true;gameVisible=keyboardVisible=false;invalid=false;
 }
+
+void DisplayManager::beginMedia(int x,int y,int width,int height) {
+  if(invalid||!mediaVisible||x!=mediaX||y!=mediaY||width!=mediaW||height!=mediaH) {
+    tft.fillScreen(0);mediaTitle=mediaHint="";
+  }
+  mediaVisible=true;mediaX=x;mediaY=y;mediaW=width;mediaH=height;
+  gameVisible=pythonVisible=calculatorVisible=keyboardVisible=false;invalid=false;
+}
+void DisplayManager::mediaBlock(int x,int y,uint16_t* pixels,int width,int height) {
+  if(!asleep)tft.drawRGBBitmap(x,y,pixels,width,height);
+}
+void DisplayManager::mediaStatus(const String& title,const String& hint) {
+  if(!mediaVisible||asleep)return;
+  if(title!=mediaTitle) { tft.fillRect(0,0,tft.width(),24,0);print(title.substring(0,(tft.width()-12)/6),6,8,0xFFFF);mediaTitle=title; }
+  if(hint!=mediaHint) { tft.fillRect(0,tft.height()-24,tft.width(),24,0);print(hint.substring(0,(tft.width()-12)/6),6,tft.height()-16,0xFFFF);mediaHint=hint; }
+}

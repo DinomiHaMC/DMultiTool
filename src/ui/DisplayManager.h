@@ -26,6 +26,9 @@ class DisplayManager  {
   bool pythonVisible=false;
   uint8_t pythonTheme=255;
   PythonView previousPython;
+  bool mediaVisible=false;
+  String mediaTitle,mediaHint;
+  int mediaX=-1,mediaY=-1,mediaW=0,mediaH=0;
   bool calculatorVisible=false;
   CalculatorModel previousCalculator;
   uint8_t saverMode=255;
@@ -51,6 +54,10 @@ class DisplayManager  {
   void renderCalculator(const CalculatorModel& model,uint8_t theme);
   void screensaver(uint8_t mode,uint32_t now,uint8_t theme);
   void notification(const String& text,uint8_t theme);
+  bool mediaNeedsRedraw()const { return invalid||!mediaVisible; }
+  void beginMedia(int x,int y,int width,int height);
+  void mediaBlock(int x,int y,uint16_t* pixels,int width,int height);
+  void mediaStatus(const String& title,const String& hint);
   int width()const { return tft.width(); }
   int height()const { return tft.height(); }
 };

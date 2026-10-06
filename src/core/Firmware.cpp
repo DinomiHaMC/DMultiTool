@@ -13,6 +13,7 @@ void Firmware::begin()  {
   apps.add(settings);
   apps.add(games);
   apps.add(utils);
+  apps.add(media);
   ui.exit=[this]  {
     apps.launcher();
   };

@@ -15,6 +15,7 @@
 #include "../apps/PythonApp.h"
 #include "../apps/UtilsApp.h"
 #include "../apps/ScriptingApp.h"
+#include "../apps/MediaApp.h"
 class Firmware  {
   ServiceManager services;
   UI ui  {
@@ -58,6 +59,7 @@ class Firmware  {
   PythonApp python { context };
   ScriptingApp scripting { context,scripts,python };
   UtilsApp utils { context };
+  MediaApp media { context };
   uint32_t statusAt=0;
   uint16_t frames=0;
   bool connected=false;

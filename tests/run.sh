@@ -36,3 +36,14 @@ g++ -std=c++17 -Wall -Wextra -Wno-missing-field-initializers -Itests/display-stu
 
 g++ -std=c++17 -Wall -Wextra -Wno-missing-field-initializers -Itests/display-stubs src/games/ArcadeModels.cpp src/services/Calculator.cpp src/ui/KeyboardModel.cpp src/ui/DisplayManager.cpp src/ui/GameRenderer.cpp src/ui/Theme.cpp tests/game_render_test.cpp -o "$binary"
 "$binary"
+
+media_decoder_object="$(mktemp /tmp/dmt-jpeg.XXXXXX.o)"
+gcc -std=c11 -O2 -Wall -Wextra -c src/third_party/tjpgd/tjpgd.c -o "$media_decoder_object"
+g++ -std=c++17 -O2 -Wall -Wextra -Werror src/media/MediaDecoder.cpp tests/media_test.cpp "$media_decoder_object" -o "$binary"
+"$binary"
+rm -f "$media_decoder_object"
+media_decoder_object="$(mktemp /tmp/dmt-jpeg.XXXXXX.o)"
+gcc -std=c11 -O2 -Wall -Wextra -c src/third_party/tjpgd/tjpgd.c -o "$media_decoder_object"
+g++ -std=c++17 -O2 -Wall -Wextra -Wno-missing-field-initializers -Itests/display-stubs src/games/ArcadeModels.cpp src/services/Calculator.cpp src/ui/KeyboardModel.cpp src/ui/DisplayManager.cpp src/ui/GameRenderer.cpp src/ui/Theme.cpp src/media/MediaDecoder.cpp tests/media_display_test.cpp "$media_decoder_object" -o "$binary"
+"$binary"
+rm -f "$media_decoder_object"

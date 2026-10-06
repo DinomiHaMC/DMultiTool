@@ -28,3 +28,9 @@ App* AppManager::find(const String& name)  {
   for(int i=0;i<count;i++)if(name==registry[i]->name())return registry[i];
   return nullptr;
 }
+
+bool AppManager::openFile(const String& name,const String& path) {
+  App* app=find(name);if(!app)return false;
+  if(current)current->onClose();
+  context.ui.reset();current=app;current->onOpenFile(path);return true;
+}

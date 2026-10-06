@@ -6,9 +6,9 @@
 #include "../src/games/ArcadeModels.h"
 int main(){
  DisplayManager display;display.begin(0);MenuPage launcher;launcher.title="DMultiTool";launcher.launcher=true;launcher.grid=true;launcher.columns=3;
- const char* names[]={"WiFi","Bluetooth","NFC","Infrared","Files","Scripts","Tools","Settings","Games","Utils"};
- Icon icons[]={Icon::WiFi,Icon::BLE,Icon::NFC,Icon::IR,Icon::Folder,Icon::Script,Icon::Tool,Icon::Settings,Icon::Game,Icon::Tool};
- for(int i=0;i<10;i++)launcher.items.push_back({names[i],"Open application",icons[i]});
+ const char* names[]={"WiFi","Bluetooth","NFC","Infrared","Files","Scripts","Tools","Settings","Games","Utils","Media"};
+ Icon icons[]={Icon::WiFi,Icon::BLE,Icon::NFC,Icon::IR,Icon::Folder,Icon::Script,Icon::Tool,Icon::Settings,Icon::Game,Icon::Tool,Icon::File};
+ for(int i=0;i<11;i++)launcher.items.push_back({names[i],"Open application",icons[i]});
  Status status;status.sd=status.wifi=status.nfc=true;status.heap=120000;
  for(unsigned theme=0;theme<ThemeManager::Count;theme++){
   display.invalidate();display.render(launcher,status,"",ToastType::Info,theme,true);

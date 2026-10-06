@@ -13,6 +13,7 @@ class AppManager  {
   App* find(const String& name);
   void add(App& app);
   bool open(const String& name);
+  bool openFile(const String& name,const String& path);
   void launcher();
   void update();
   void draw();

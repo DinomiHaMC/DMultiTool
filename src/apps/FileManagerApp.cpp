@@ -177,6 +177,10 @@ void FileManagerApp::context(const String& full,bool directory)  {
 void FileManagerApp::openFile(const String& file)  {
   String lower=file;
   lower.toLowerCase();
+  if(lower.endsWith(".jpg")||lower.endsWith(".jpeg")||lower.endsWith(".bmp")||lower.endsWith(".mjpeg")||lower.endsWith(".mjpg")) {
+    if(!ctx.apps->openFile("Media",file))ui.message("Media","Player unavailable");
+    return;
+  }
   bool supported=false;
   for(const char* ext:  {
     ".txt",".log",".json",".csv",".ir",".nfc",".script",".py",".md"

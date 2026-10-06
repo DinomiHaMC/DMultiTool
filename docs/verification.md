@@ -1,4 +1,4 @@
-# Verification — DMultiTool 3.1.1
+# Verification — DMultiTool 3.2.0
 
 Дата: 2026-10-06. Target: ESP32 Dev Module / ESP32-WROOM-32, Arduino core 3.3.12, Arduino CLI 1.4.1, NimBLE-Arduino 2.5.1. GPIO сохранены. Наличие рабочего оборудования подтверждено пользователем для прежней прошивки; новая версия проверена сборкой и host-тестами.
 
@@ -31,7 +31,7 @@ DMULTITOOL_ANDROID_SDK=/tmp/dmt-android-sdk bash companion/android/build.sh
 
 Build helper задаёт FQBN esp32:esp32:esp32, PartitionScheme=huge_app и FW_COMMIT из Git. Экспортированный образ: build/DMultiTool.bin, application offset 0x10000. Для Android нужны JDK и Android SDK; SDK использован из /tmp, системная установка не менялась.
 
-Linker-отчёт: около 1,97 MB flash (62% из 3,145,728), 112,672 bytes static RAM (34% из 327,680). Это не измерение свободного heap при включённых WiFi/Bluetooth/Python; библиотеки и стеки выделяют память во время работы. Итоговый образ повторно собирается после коммита, чтобы FW_COMMIT соответствовал исходникам.
+Linker-отчёт: 1,994,215 bytes flash (63% из 3,145,728), 113,752 bytes static RAM (34% из 327,680). Это не измерение свободного heap при включённых WiFi/Bluetooth/Python; библиотеки и стеки выделяют память во время работы. Итоговый образ повторно собирается после коммита, чтобы FW_COMMIT соответствовал исходникам.
 
 Host-модели HTTP и Bluetooth не подтверждают реальное TLS-соединение, radio scheduling, pairing, дальность или пропускную способность. Android APK собран, но на телефоне не установлен. SVG renderer не проверяет электрическую работу TFT. Firmware в ESP32 автоматически не загружалась.
 
@@ -119,3 +119,31 @@ BLE 2.1.6 (2026-10-05): core 3.3.12 `initArduino()` освобождает па�
 13. Idle: display timeout, первая кнопка только будит, >5 minutes idle с WiFi/BLE OFF без pending jobs. Light sleep через timer опрашивает ADC; backlight остаётся запитан, поскольку BL GPIO отсутствует.
 
 Эти аппаратные проверки **ещё не выполнены** в этом окружении. Firmware не была загружена автоматически.
+
+## Media — 3.2
+
+Настоящий TJpgDec и MediaDecoder проверены на собственных JPEG fixtures:
+baseline RGB/grayscale, odd dimensions, downscale, оба положения экрана,
+APP metadata с вложенными маркерами, отказ для progressive/CMYK,
+обрыв файла, ошибочные сегменты, отмена и 500 детерминированных мутаций.
+Проверены BMP 24/32 bit, top-down/bottom-up, padding, scaling, границы;
+MJPEG EOF, multipart separators, seek и rollover кэша 64 кадров.
+
+До аппаратной проверки остаются скорость SD/TFT, удержание OK во время
+декодирования, переход между Files/Media и возврат ориентации экрана,
+пауза/seek/loop, уведомления поверх фото и восстановление изображения.
+Видеозвук и контейнеры MP4/AVI на устройстве не поддерживаются.
+
+ASan/UBSan: PASS для MediaDecoder/TJpgDec и JPEG мутаций после расширения
+IDCT/dequantization арифметики до int64_t. LeakSanitizer отключён: среда
+запуска использует ptrace и не поддерживает его. Проверка утечек этим
+запуском не подтверждается.
+
+Media DisplayManager: PASS, декодированные RGB565 блоки переданы настоящему
+renderer с TFT stubs. Проверены границы viewport, оба положения экрана,
+отсутствие очистки при следующем кадре того же размера, dirty HUD;
+SVG media-photo/media-landscape/media-video осмотрены.
+
+PC converter: PASS, настоящий ffmpeg: MP4 → MJPEG, BMP/JPEG, .fps,
+неверные параметры/вход, сохранение существующих файлов и очистка временных.
+Команда: `python3 tests/media_convert_test.py` (нужен ffmpeg).
