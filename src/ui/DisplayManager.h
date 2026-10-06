@@ -1,6 +1,7 @@
 #pragma once
 #include <Adafruit_ST7789.h>
 #include "Theme.h"
+#include "GameCanvas.h"
 #include "Model.h"
 #include "KeyboardModel.h"
 #include "../games/GameModels.h"
@@ -21,6 +22,7 @@ class DisplayManager  {
   bool gameVisible=false,gamePaused=false;
   uint8_t gameTheme=255;
   Games::Board previousGame;
+  GameCanvas gameCanvas;
   bool pythonVisible=false;
   uint8_t pythonTheme=255;
   PythonView previousPython;

@@ -29,7 +29,10 @@ g++ -std=c++17 -Wall -Wextra -Werror -Itests/stubs src/input/Keyboard.cpp tests/
 g++ -std=c++17 -Wall -Wextra -Werror src/services/NDEFCodec.cpp src/services/ScriptParser.cpp tests/codec_test.cpp -o "$binary"
 "$binary"
 
-g++ -std=c++17 -Wall -Wextra -Wno-missing-field-initializers -Itests/display-stubs src/games/ArcadeModels.cpp src/services/Calculator.cpp src/ui/KeyboardModel.cpp src/ui/DisplayManager.cpp src/ui/Theme.cpp tests/display_test.cpp -o "$binary"
+g++ -std=c++17 -Wall -Wextra -Wno-missing-field-initializers -Itests/display-stubs src/games/ArcadeModels.cpp src/services/Calculator.cpp src/ui/KeyboardModel.cpp src/ui/DisplayManager.cpp src/ui/GameRenderer.cpp src/ui/Theme.cpp tests/display_test.cpp -o "$binary"
 "$binary"
-g++ -std=c++17 -Wall -Wextra -Wno-missing-field-initializers -Itests/display-stubs src/games/ArcadeModels.cpp src/services/Calculator.cpp src/ui/KeyboardModel.cpp src/ui/DisplayManager.cpp src/ui/Theme.cpp src/ui/UI.cpp tests/ui_test.cpp -o "$binary"
+g++ -std=c++17 -Wall -Wextra -Wno-missing-field-initializers -Itests/display-stubs src/games/ArcadeModels.cpp src/services/Calculator.cpp src/ui/KeyboardModel.cpp src/ui/DisplayManager.cpp src/ui/GameRenderer.cpp src/ui/Theme.cpp src/ui/UI.cpp tests/ui_test.cpp -o "$binary"
+"$binary"
+
+g++ -std=c++17 -Wall -Wextra -Wno-missing-field-initializers -Itests/display-stubs src/games/ArcadeModels.cpp src/services/Calculator.cpp src/ui/KeyboardModel.cpp src/ui/DisplayManager.cpp src/ui/GameRenderer.cpp src/ui/Theme.cpp tests/game_render_test.cpp -o "$binary"
 "$binary"
