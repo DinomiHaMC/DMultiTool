@@ -1,10 +1,12 @@
 #pragma once
 #include "MenuApp.h"
-#include "../games/GameModels.h"
+#include "../games/ArcadeModels.h"
 class GamesApp:public MenuApp {
   Games::Snake snake;
   Games::Minesweeper mines;
   Games::Tetris tetris;
+  Games::Puzzle2048 puzzle;
+  Games::Arcade arcade;
   Games::Board board;
   bool playing=false,confirming=false,pendingReveal=false,paused=false;
   uint8_t game=0;

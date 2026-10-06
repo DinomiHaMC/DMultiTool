@@ -3,6 +3,8 @@
 #include "../core/Version.h"
 #include "CyrillicFont.h"
 #include <cstring>
+#include <cmath>
+#include "../games/ArcadeModels.h"
 void DisplayManager::screensaver(uint8_t mode,uint32_t now,uint8_t theme) {
   if(now-saverAt<40)return;
   saverAt=now;const auto& t=ThemeManager::get(theme);
@@ -367,6 +369,63 @@ void DisplayManager::renderGame(const Games::Board& b,uint8_t theme,bool paused)
   if(pythonVisible) { pythonVisible=false;invalid=true; }
   const Theme& t=ThemeManager::get(theme);
   bool full=invalid||!gameVisible||keyboardVisible||gameTheme!=theme||previousGame.kind!=b.kind||previousGame.over!=b.over||gamePaused!=paused;
+  if(b.kind>=Games::Board::Puzzle2048) {
+    bool changed=full||b.score!=previousGame.score||b.detail!=previousGame.detail||b.won!=previousGame.won||b.cells!=previousGame.cells||b.spriteCount!=previousGame.spriteCount||b.sprites!=previousGame.sprites;
+    if(!changed)return;
+    if(full) { tft.fillScreen(t.background);print(Games::title(b.kind),8,9,t.accent,2); }
+    tft.fillRect(0,34,tft.width(),18,t.background);
+    String extra=b.kind==Games::Board::Pong?"  AI "+String(b.detail):b.kind==Games::Board::Breakout||b.kind==Games::Board::SpaceInvaders||b.kind==Games::Board::Asteroids?"  Lives "+String(b.detail):"";
+    print("Score "+String(b.score)+extra,8,38,t.foreground);
+    int height=tft.height()-86,width=min(tft.width()-20,height*160/180);
+    if(b.kind==Games::Board::Puzzle2048)width=min(tft.width()-20,height);
+    height=b.kind==Games::Board::Puzzle2048?width:width*180/160;
+    int left=(tft.width()-width)/2,top=60;
+    tft.fillRect(left,top,width,height,t.background);
+    tft.drawRect(left-1,top-1,width+2,height+2,t.muted);
+    static const uint16_t colors[]={0,0x07FF,0x07E0,0xFFE0,0xF81F,0xFD20,0x001F,0xF800};
+    if(b.kind==Games::Board::Puzzle2048) {
+      int cell=width/4;
+      for(int i=0;i<16;i++) {
+        int x=left+(i%4)*cell,y=top+(i/4)*cell;auto value=b.cells[i];
+        tft.fillRoundRect(x+2,y+2,cell-4,cell-4,3,value?colors[1+(value%7)]:t.panel);
+        if(value) { String label=String(1u<<value);int size=cell>=48&&label.length()<=3?2:1;
+          print(label,x+(cell-label.length()*6*size)/2,y+(cell-8*size)/2,0x0000,size); }
+      }
+    } else {
+      auto px=[&](int x){return left+constrain(x,0,160)*width/160;};
+      auto py=[&](int y){return top+constrain(y,0,180)*height/180;};
+      for(int i=0;i<b.spriteCount;i++) {
+        const auto& a=b.sprites[i];if(a.x+a.w<=0||a.x>=160||a.y+a.h<=0||a.y>=180)continue;
+        int x=px(a.x),y=py(a.y),w=max(1,px(a.x+a.w)-x),h=max(1,py(a.y+a.h)-y);
+        uint16_t color=colors[a.color%8];
+        if(a.type==Games::Board::Sprite::Ball)tft.fillCircle(x+w/2,y+h/2,max(1,w/2),color);
+        else if(a.type==Games::Board::Sprite::Ship) {
+          float radians=a.angle*3.14159265f/180;int cx=a.x+a.w/2,cy=a.y+a.h/2;
+          int xs[3],ys[3];for(int k=0;k<3;k++) { float d=radians+(k==0?0:k==1?2.5f:-2.5f);xs[k]=px(cx+int(cosf(d)*7));ys[k]=py(cy+int(sinf(d)*7)); }
+          for(int k=0;k<3;k++)tft.drawLine(xs[k],ys[k],xs[(k+1)%3],ys[(k+1)%3],color);
+        } else if(a.type==Games::Board::Sprite::Rock) {
+          int cx=a.x+a.w/2,cy=a.y+a.h/2;int xs[8],ys[8];
+          for(int k=0;k<8;k++) { float d=k*3.14159265f/4;float radius=(k%3==0?.8f:1.f)*a.w/2;xs[k]=px(cx+int(cosf(d)*radius));ys[k]=py(cy+int(sinf(d)*radius)); }
+          for(int k=0;k<8;k++)tft.drawLine(xs[k],ys[k],xs[(k+1)%8],ys[(k+1)%8],color);
+        } else if(a.type==Games::Board::Sprite::Bird) {
+          tft.fillRoundRect(x,y,w,h,2,color);tft.fillRect(x+w/2,y+h/3,max(1,w/4),max(1,h/4),0);tft.drawLine(x,y+h/2,x+w/3,y+h/3,t.accent);
+        } else if(a.type==Games::Board::Sprite::Dino) {
+          tft.fillRect(x,y+h/3,max(1,w*2/3),max(1,h*2/3),color);tft.fillRect(x+w/2,y,max(1,w/2),max(1,h/2),color);tft.fillRect(x+w*3/4,y+1,1,1,0);
+        } else if(a.type==Games::Board::Sprite::Alien) {
+          tft.fillRect(x+1,y+h/3,w-2,max(1,h/2),color);tft.fillRect(x+w/4,y,max(1,w/2),h,color);
+          tft.fillRect(x+w/3,y+h/3,2,2,0);tft.fillRect(x+w*2/3,y+h/3,2,2,0);
+        } else tft.fillRect(x,y,w,h,color);
+      }
+    }
+    tft.fillRect(0,tft.height()-23,tft.width(),23,t.background);
+    print(Games::controls(b.kind),6,tft.height()-16,t.muted);
+    if(b.over||paused) {
+      int y=top+height/2-24;tft.fillRoundRect(10,y,tft.width()-20,50,5,t.selection);
+      print(paused?"PAUSED":b.won?"YOU WIN":"GAME OVER",24,y+8,t.foreground,2);
+      print("OK restart/resume | Hold OK exit",12,y+33,t.muted);
+    }
+    previousGame=b;gameVisible=true;keyboardVisible=pythonVisible=false;gameTheme=theme;gamePaused=paused;invalid=false;return;
+  }
   const char* title=b.kind==Games::Board::Snake?"Snake":b.kind==Games::Board::Minesweeper?"Minesweeper":"Tetris";
   int cell=min((tft.width()-20)/(int)b.width,(tft.height()-86)/(int)b.height);
   cell=min(cell,24);

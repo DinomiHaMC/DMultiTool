@@ -7,9 +7,16 @@ struct Random {
   uint32_t next() { state=state*1664525u+1013904223u; return state; }
 };
 struct Board {
-  enum Kind { Snake, Minesweeper, Tetris } kind=Snake;
+  enum Kind { Snake, Minesweeper, Tetris, Puzzle2048, Pong, Breakout, FlappyBird, DinoRunner, SpaceInvaders, Asteroids } kind=Snake;
   uint8_t width=0,height=0;
   std::array<uint8_t,400> cells{};
+  struct Sprite {
+    enum Type { Rect, Ball, Bird, Dino, Alien, Ship, Rock, Shot } type=Rect;
+    int16_t x=0,y=0,angle=0;uint8_t w=0,h=0,color=1;
+    bool operator==(const Sprite& other)const { return type==other.type&&x==other.x&&y==other.y&&angle==other.angle&&w==other.w&&h==other.h&&color==other.color; }
+    bool operator!=(const Sprite& other)const { return !(*this==other); }
+  };
+  std::array<Sprite,64> sprites{};uint8_t spriteCount=0;
   uint32_t score=0;
   int detail=0,cursor=-1;
   bool over=false,won=false;

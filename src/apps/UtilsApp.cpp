@@ -2,6 +2,7 @@
 #include "../services/AudioControl.h"
 void UtilsApp::home() {
   auto p=menu("Utils");
+  item(p,"Morse",[this]{morse();},"Hold any arrow for tone | OK exit");
   item(p,"AudioCtrl",[this]{startAudio();},"Bluetooth audio remote");
   item(p,"Calculator",[this]{calculatorActive=true;s.display.invalidate();ui.dirty=true;},"Basic / scientific keyboard");
   item(p,"File transfer",[this]{transfer();},"microSD files over Bluetooth");
@@ -49,7 +50,18 @@ void UtilsApp::audioPage() {
   item(p,"OK",{},"Play / pause");
   ui.page(std::move(p),false);
 }
+void UtilsApp::morse() {
+  morseActive=true;morseDown=false;s.buzzer.beginKey();morsePage();
+}
+void UtilsApp::morsePage() {
+  ui.rows("Morse",String(morseDown?"KEY DOWN":"Ready")+"\n700 Hz\nTap arrow: short signal\nHold arrow: long signal\nRelease: silence\nOK: exit",false);
+  ui.model().hint="All arrows: tone | OK: exit";
+}
 void UtilsApp::handleInput(InputEvent event) {
+  if(morseActive) {
+    if(event==InputEvent::Ok||event==InputEvent::OkLong) { s.buzzer.endKey();morseActive=morseDown=false;home(); }
+    return;
+  }
   if(transferActive) {
     if(event==InputEvent::OkLong) { onClose();home(); }
     return;
@@ -88,6 +100,12 @@ void UtilsApp::handleInput(InputEvent event) {
   }
 }
 void UtilsApp::update() {
+  if(morseActive) {
+    Key key=s.input.held();bool down=key==Key::Up||key==Key::Down||key==Key::Left||key==Key::Right;
+    s.buzzer.key(down);
+    if(down!=morseDown) { morseDown=down;morsePage(); }
+    return;
+  }
   if(transferActive&&millis()-transferRefresh>500) { transferRefresh=millis();transferPage();return; }
   if(!audioActive)return;
   const bool connected=s.ble.connected();
@@ -130,6 +148,8 @@ void UtilsApp::notifications(bool push) {
   ui.page(std::move(p),push);
 }
 void UtilsApp::onClose() {
+  if(morseActive)s.buzzer.endKey();
+  morseActive=morseDown=false;
   stopAudio();calculatorActive=false;
   if(transferActive) {
     s.bridge.enable(false);

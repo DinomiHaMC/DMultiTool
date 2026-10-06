@@ -3,6 +3,7 @@
 #include <cstring>
 #include "../src/ui/DisplayManager.h"
 #include "../src/ui/Theme.h"
+#include "../src/games/ArcadeModels.h"
 int main(){
  DisplayManager display;display.begin(0);MenuPage launcher;launcher.title="DMultiTool";launcher.launcher=true;launcher.grid=true;launcher.columns=3;
  const char* names[]={"WiFi","Bluetooth","NFC","Infrared","Files","Scripts","Tools","Settings","Games","Utils"};
@@ -28,6 +29,20 @@ int main(){
  display.rotation(1);display.renderCalculator(calc,5);MockTFT::write("docs/screenshots/calculator-landscape.svg",320,240);display.rotation(0);
  for(int mode=1;mode<=3;mode++) { display.invalidate();for(int frame=1;frame<=80;frame++)display.screensaver(mode,frame*40+mode*4000,mode+3);std::string path="docs/screenshots/screensaver-"+std::to_string(mode)+".svg";MockTFT::write(path.c_str(),240,320); }
  display.invalidate();
+ for(int rotation=0;rotation<2;rotation++) {
+  display.rotation(rotation);
+  for(int kind=3;kind<10;kind++) {
+   Games::Board frame;
+   if(kind==3) { Games::Puzzle2048 puzzle;puzzle.reset(7);puzzle.cells[0]=11;puzzle.cells[1]=8;puzzle.board(frame); }
+   else { Games::Arcade arcade;arcade.reset(static_cast<Games::Board::Kind>(kind),7);arcade.board(frame); }
+   display.invalidate();display.renderGame(frame,4,false);
+   count=MockTFT::shapes.size();display.renderGame(frame,4,false);assert(count==MockTFT::shapes.size());
+   std::string path="docs/screenshots/arcade-"+std::to_string(kind)+(rotation?"-landscape":"")+".svg";
+   MockTFT::write(path.c_str(),rotation?320:240,rotation?240:320);
+   frame.over=true;display.renderGame(frame,4,false);assert(MockTFT::shapes.size()>0);
+  }
+ }
+ display.rotation(0);
  Games::Board board;board.kind=Games::Board::Snake;board.width=18;board.height=20;board.cells[100]=2;board.cells[101]=1;board.cells[60]=3;
  display.renderGame(board,0,false);MockTFT::write("docs/screenshots/game-snake.svg",240,320);
  count=MockTFT::shapes.size();display.renderGame(board,0,false);assert(MockTFT::shapes.size()==count);

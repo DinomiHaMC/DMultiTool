@@ -1,4 +1,4 @@
-# Verification — DMultiTool 3.0.0
+# Verification — DMultiTool 3.1.0
 
 Дата: 2026-10-06. Target: ESP32 Dev Module / ESP32-WROOM-32, Arduino core 3.3.12, Arduino CLI 1.4.1, NimBLE-Arduino 2.5.1. GPIO сохранены. Наличие рабочего оборудования подтверждено пользователем для прежней прошивки; новая версия проверена сборкой и host-тестами.
 
@@ -31,9 +31,29 @@ DMULTITOOL_ANDROID_SDK=/tmp/dmt-android-sdk bash companion/android/build.sh
 
 Build helper задаёт FQBN esp32:esp32:esp32, PartitionScheme=huge_app и FW_COMMIT из Git. Экспортированный образ: build/DMultiTool.bin, application offset 0x10000. Для Android нужны JDK и Android SDK; SDK использован из /tmp, системная установка не менялась.
 
-Linker-отчёт: около 1,95 MB flash (62% из 3,145,728), 109,256 bytes static RAM (33% из 327,680). Это не измерение свободного heap при включённых WiFi/Bluetooth/Python; библиотеки и стеки выделяют память во время работы. Итоговый образ повторно собирается после коммита, чтобы FW_COMMIT соответствовал исходникам.
+Linker-отчёт: около 1,97 MB flash (62% из 3,145,728), 112,120 bytes static RAM (34% из 327,680). Это не измерение свободного heap при включённых WiFi/Bluetooth/Python; библиотеки и стеки выделяют память во время работы. Итоговый образ повторно собирается после коммита, чтобы FW_COMMIT соответствовал исходникам.
 
 Host-модели HTTP и Bluetooth не подтверждают реальное TLS-соединение, radio scheduling, pairing, дальность или пропускную способность. Android APK собран, но на телефоне не установлен. SVG renderer не проверяет электрическую работу TFT. Firmware в ESP32 автоматически не загружалась.
+
+## Игры и Морзе — 3.1
+
+Host regression проверяет настоящий ArcadeModels.cpp: слияния без двойного
+merge, отсутствие spawn при неудачном ходе, 2048/win и заполненный тупик;
+Pong bounce/goals/match; Breakout brick hit/paddle/lives/win;
+Flappy flap/pipe/score; Dino jump/duck/bird/cactus; Invaders shots/lives/waves;
+Asteroids inertia/wrap/split/lives. Дополнительно 2,000 шагов каждой
+динамичной игры с детерминированными управлениями и проверкой границ sprites.
+
+Renderer проверен для всех семи новых игр в portrait/landscape, без повторной
+отрисовки неизменённого кадра; SVG сохранены в docs/screenshots/arcade-*.
+Просмотрены экраны 2048, Invaders и Asteroids. Это визуализация с TFT stubs.
+
+Настоящий Buzzer.cpp проверен с tone stubs: 700 Hz остаётся включённым при
+долгом удержании и повторном key(true), системные beep не прерывают сигнал,
+release/endKey выключают тон, повторный вход и возврат к UI beep работают.
+IR timer channel 6 сохранён. Реальные акустика, задержка ADC/SD/BLE и fps
+требуют оборудования. Проверить все четыре стрелки, короткий/длинный OK,
+выход во время звука и отсутствие тона после закрытия.
 
 ## Новые проверки на оборудовании
 
