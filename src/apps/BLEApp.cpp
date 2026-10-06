@@ -51,12 +51,12 @@ void BLEApp::home()  {
 void BLEApp::scan()  {
   if(!ensure())return;
   if(!s.ble.scan())  {
-    report(false,"","BLE scan busy");
+    ui.message("BLE Scanner",s.ble.lastError());
     return;
   }
   scanVersion=s.ble.revision;
   scanWaiting=true;
-  ui.progress("BLE Scanner","Passive scan 4 seconds",[this]  {
+  ui.progress("BLE Scanner","Active BLE scan 6 seconds",[this]  {
     s.ble.stop();scanWaiting=false;
   }
   );
@@ -70,6 +70,7 @@ void BLEApp::devices()  {
   for(int i=0;i<s.ble.count;i++)item(p,s.ble.devices[i].name,[this,i]  {
     info(i);
   },s.ble.devices[i].address+" "+s.ble.devices[i].rssi+"dBm");
+  if(!s.ble.count)p.hint="BLE only; enable nearby advertising";
   if(!s.ble.count)item(p,"Run Scanner",[this]  {
     scan();
   }
@@ -78,7 +79,7 @@ void BLEApp::devices()  {
 }
 void BLEApp::info(int i)  {
   auto& d=s.ble.devices[i];
-  ui.rows("BLE Device",d.name+"\nAddress: "+d.address+"\nRSSI: "+d.rssi+" dBm\nServices:\n"+d.services+"Manufacturer hex:\n"+d.manufacturer);
+  ui.rows("BLE Device",d.name+(d.named?"":"\nNo advertised name")+"\nAddress: "+d.address+"\nRSSI: "+d.rssi+" dBm\nServices:\n"+d.services+"Manufacturer hex:\n"+d.manufacturer);
 }
 void BLEApp::advertiser()  {
   if(!ensure())return;
@@ -189,6 +190,7 @@ void BLEApp::update()  {
     scanWaiting=false;
     ui.model().onBack=nullptr;
     ui.back();
-    devices();
+    if(!s.ble.lastError().isEmpty())ui.message("BLE Scanner",s.ble.lastError());
+    else devices();
   }
 }

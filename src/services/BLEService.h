@@ -9,6 +9,7 @@
 struct BLEInfo  {
   String name,address,services,manufacturer;
   int rssi=0;
+  bool named=false;
 };
 class BLEUtilityService:public BridgeChannel  {
   class BridgeCallbacks:public NimBLECharacteristicCallbacks {
@@ -17,6 +18,12 @@ class BLEUtilityService:public BridgeChannel  {
     explicit BridgeCallbacks(BLEUtilityService& service):owner(service) {}
     void onWrite(NimBLECharacteristic* characteristic,NimBLEConnInfo& info)override;
   } bridgeCallbacks{*this};
+  class ScanCallbacks:public NimBLEScanCallbacks {
+    BLEUtilityService& owner;
+  public:
+    explicit ScanCallbacks(BLEUtilityService& service):owner(service) {}
+    void onScanEnd(const NimBLEScanResults&,int)override { owner.scanEnded=true; }
+  } scanCallbacks{*this};
   QueueHandle_t frames=nullptr;
   NimBLECharacteristic* bridgeTX=nullptr;
   NimBLEScan* scanner=nullptr;
@@ -24,6 +31,7 @@ class BLEUtilityService:public BridgeChannel  {
   NimBLEHIDDevice* hid=nullptr;
   NimBLECharacteristic *keyboard=nullptr,*mouse=nullptr,*media=nullptr;
   bool initialized=false,releasePending=false;
+  std::atomic<bool> scanCancelled{false},scanEnded{false};
   uint32_t keyTime=0,bridgeRetry=0;
   String typing;
   String error;

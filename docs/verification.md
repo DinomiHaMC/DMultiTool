@@ -1,4 +1,4 @@
-# Verification — DMultiTool 3.2.0
+# Verification — DMultiTool 3.2.1
 
 Дата: 2026-10-06. Target: ESP32 Dev Module / ESP32-WROOM-32, Arduino core 3.3.12, Arduino CLI 1.4.1, NimBLE-Arduino 2.5.1. GPIO сохранены. Наличие рабочего оборудования подтверждено пользователем для прежней прошивки; новая версия проверена сборкой и host-тестами.
 
@@ -31,7 +31,7 @@ DMULTITOOL_ANDROID_SDK=/tmp/dmt-android-sdk bash companion/android/build.sh
 
 Build helper задаёт FQBN esp32:esp32:esp32, PartitionScheme=huge_app и FW_COMMIT из Git. Экспортированный образ: build/DMultiTool.bin, application offset 0x10000. Для Android нужны JDK и Android SDK; SDK использован из /tmp, системная установка не менялась.
 
-Linker-отчёт: 1,994,215 bytes flash (63% из 3,145,728), 113,752 bytes static RAM (34% из 327,680). Это не измерение свободного heap при включённых WiFi/Bluetooth/Python; библиотеки и стеки выделяют память во время работы. Итоговый образ повторно собирается после коммита, чтобы FW_COMMIT соответствовал исходникам.
+Linker-отчёт: 1,995,003 bytes flash (63% из 3,145,728), 113,832 bytes static RAM (34% из 327,680). Это не измерение свободного heap при включённых WiFi/Bluetooth/Python; библиотеки и стеки выделяют память во время работы. Итоговый образ повторно собирается после коммита, чтобы FW_COMMIT соответствовал исходникам.
 
 Host-модели HTTP и Bluetooth не подтверждают реальное TLS-соединение, radio scheduling, pairing, дальность или пропускную способность. Android APK собран, но на телефоне не установлен. SVG renderer не проверяет электрическую работу TFT. Firmware в ESP32 автоматически не загружалась.
 
@@ -147,3 +147,15 @@ SVG media-photo/media-landscape/media-video осмотрены.
 PC converter: PASS, настоящий ffmpeg: MP4 → MJPEG, BMP/JPEG, .fps,
 неверные параметры/вход, сохранение существующих файлов и очистка временных.
 Команда: `python3 tests/media_convert_test.py` (нужен ffmpeg).
+
+## BLE Scanner — 3.2.1
+
+Пассивный scan заменён на active scan 6 s, отключён фильтр повторов для
+получения обновлений advertising/scan response. Включена явная проверка
+SDK start, вывод ошибок запуска/выделения task RAM и адрес вместо Unnamed.
+Host-тест BLEScanSession проверяет completion, повторный запуск, отказ SDK
+start, отмену до task startup, во время работы и гонку с SDK start. Копирование результатов ждёт
+callback onScanEnd, чтобы получить последние scan responses; задержка
+callback после остановки контроллера проверена отдельным сценарием.
+Новый режим и получение имён требуют проверки на реальном BLE advertiser;
+Classic discovery не добавлен.

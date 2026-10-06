@@ -1,4 +1,5 @@
 #include "BLEService.h"
+#include "BLEScanSession.h"
 #include "../config.h"
 #include <esp_heap_caps.h>
 // NimBLE 2.5.1 includes the legacy bt-mem header, registering BOTH radio
@@ -32,7 +33,9 @@ bool BLEUtilityService::initialize()  {
     return false;
   }
   scanner=NimBLEDevice::getScan();
-  scanner->setActiveScan(false);
+  scanner->setScanCallbacks(&scanCallbacks);
+  scanner->setActiveScan(true);
+  scanner->setDuplicateFilter(0);
   scanner->setInterval(100);
   scanner->setWindow(60);
   scanner->setMaxResults(20);
@@ -79,6 +82,7 @@ void BLEUtilityService::shutdown() {
   releasePending=false;
 }
 void BLEUtilityService::stop()  {
+  scanCancelled=true;
   if(scanner&&scanning)scanner->stop();
   if(server)server->advertiseOnDisconnect(false);
   if(initialized)NimBLEDevice::getAdvertising()->stop();
@@ -86,25 +90,43 @@ void BLEUtilityService::stop()  {
   cancelTyping();
 }
 bool BLEUtilityService::scan()  {
-  if(!enabled||scanning||!initialize())return false;
+  if(!enabled) { error="Enable Bluetooth first";return false; }
+  if(scanning) { error="BLE scan already running";return false; }
+  if(!initialize())return false;
   stop();
+  error="";
+  scanCancelled=false;scanEnded=false;
   scanning=true;
   scanDone=false;
   if(xTaskCreate(scanWorker,"ble-scan",4096,this,1,nullptr)!=pdPASS)  {
     scanning=false;
+    error="Not enough RAM for BLE scan task";
     return false;
   }
   return true;
 }
 void BLEUtilityService::scanWorker(void* p)  {
   auto& s=*(BLEUtilityService*)p;
-  auto results=s.scanner->getResults(4000,false);
+  // Start explicitly: blocking getResults(duration) also returns an empty
+  // list on controller start failure, hiding that failure from the UI.
+  auto outcome=BLEScanSession::run(*s.scanner,s.scanCancelled,[]{vTaskDelay(pdMS_TO_TICKS(20));},[&s]{return s.scanEnded.load();});
+  if(outcome==BLEScanSession::Result::StartFailed) {
+    s.error="BLE scan start failed\nConnection / controller busy\nRetry; see Serial at 115200";
+    LOG_WARN("BLE","%s",s.error.c_str());
+    s.scanning=false;s.scanDone=true;vTaskDelete(nullptr);return;
+  }
+  if(outcome==BLEScanSession::Result::Cancelled) {
+    s.scanner->clearResults();s.count=0;
+    s.scanning=false;s.scanDone=true;vTaskDelete(nullptr);return;
+  }
+  auto results=s.scanner->getResults();
   s.count=min((int)results.getCount(),20);
   for(int i=0;i<s.count;i++)  {
     const auto* d=results.getDevice(i);
     auto& info=s.devices[i];
-    info.name=d->haveName()?d->getName().c_str():"Unnamed";
     info.address=d->getAddress().toString().c_str();
+    info.named=d->haveName()&&!d->getName().empty();
+    info.name=info.named?String(d->getName().c_str()):"BLE "+info.address;
     info.rssi=d->getRSSI();
     info.services="";
     for(int k=0;k<min((int)d->getServiceUUIDCount(),4);k++)info.services+=String(d->getServiceUUID(k).toString().c_str())+"\n";
